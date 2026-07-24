@@ -1,0 +1,133 @@
+export const CONTINENTS = {
+  'america-del-norte': {
+    name: 'América del Norte',
+    bonus: 5,
+    territories: ['alaska', 'california', 'groenlandia', 'labrador', 'mackenzie', 'mexico', 'nuevayork', 'ottawa', 'vancouver'],
+  },
+  'america-del-sur': {
+    name: 'América del Sur',
+    bonus: 2,
+    territories: ['argentina', 'brasil', 'peru', 'colombia'],
+  },
+  europa: {
+    name: 'Europa',
+    bonus: 5,
+    territories: ['alemania', 'inglaterra', 'islandia', 'moscu', 'yugoslavia', 'francia', 'suecia'],
+  },
+  africa: {
+    name: 'África',
+    bonus: 3,
+    territories: ['sudafrica', 'argelia', 'congo', 'egipto', 'madagascar', 'sudan'],
+  },
+  asia: {
+    name: 'Asia',
+    bonus: 7,
+    territories: ['aral', 'china', 'chita', 'dudinka', 'india', 'japon', 'mediooriente', 'mongolia', 'omsk', 'siberia', 'vietnam', 'vladivostok'],
+  },
+  oceania: {
+    name: 'Oceanía',
+    bonus: 2,
+    territories: ['australia', 'borneo', 'nuevaguinea', 'sumatra'],
+  },
+} as const;
+
+export type ContinentKey = keyof typeof CONTINENTS;
+
+export const TERRITORY_NAMES: Record<string, string> = {
+  alaska: 'Alaska',
+  california: 'California',
+  groenlandia: 'Groenlandia',
+  labrador: 'Labrador',
+  mackenzie: 'Mackenzie',
+  mexico: 'México',
+  nuevayork: 'Nueva York',
+  ottawa: 'Ottawa',
+  vancouver: 'Vancouver',
+  argentina: 'Argentina / Uruguay',
+  brasil: 'Brasil',
+  peru: 'Chile',
+  colombia: 'Colombia / Venezuela',
+  alemania: 'Alemania',
+  inglaterra: 'Inglaterra',
+  islandia: 'Islandia',
+  moscu: 'Moscú',
+  yugoslavia: 'Polonia / Yugoslavia',
+  francia: 'Portugal / España',
+  suecia: 'Suecia',
+  sudafrica: 'África del Sur',
+  argelia: 'Argelia',
+  congo: 'Congo',
+  egipto: 'Egipto',
+  madagascar: 'Madagascar',
+  sudan: 'Sudán',
+  aral: 'Aral',
+  china: 'China',
+  chita: 'Chita',
+  dudinka: 'Dudinka',
+  india: 'India',
+  japon: 'Japón',
+  mediooriente: 'Medio Oriente',
+  mongolia: 'Mongolia',
+  omsk: 'Omsk',
+  siberia: 'Siberia',
+  vietnam: 'Vietnam',
+  vladivostok: 'Vladivostok',
+  australia: 'Australia',
+  borneo: 'Borneo',
+  nuevaguinea: 'Nueva Guinea',
+  sumatra: 'Sumatra',
+};
+
+export const ALL_TERRITORIES = Object.keys(TERRITORY_NAMES);
+
+export function getTerritoryContinent(territory: string): ContinentKey | null {
+  for (const [key, continent] of Object.entries(CONTINENTS)) {
+    if (continent.territories.includes(territory)) return key as ContinentKey;
+  }
+  return null;
+}
+
+export const ADJACENCY: Record<string, string[]> = {
+  alaska: ['mackenzie', 'vancouver', 'vladivostok'],
+  mackenzie: ['alaska', 'vancouver', 'ottawa', 'groenlandia'],
+  vancouver: ['alaska', 'mackenzie', 'ottawa', 'california'],
+  ottawa: ['mackenzie', 'vancouver', 'california', 'nuevayork', 'labrador'],
+  labrador: ['ottawa', 'nuevayork', 'groenlandia'],
+  california: ['vancouver', 'ottawa', 'nuevayork', 'mexico'],
+  nuevayork: ['ottawa', 'labrador', 'california', 'mexico'],
+  mexico: ['california', 'nuevayork', 'colombia'],
+  groenlandia: ['mackenzie', 'labrador', 'islandia'],
+  colombia: ['mexico', 'brasil', 'peru'],
+  brasil: ['colombia', 'peru', 'argentina', 'argelia'],
+  peru: ['colombia', 'brasil', 'argentina'],
+  argentina: ['peru', 'brasil'],
+  islandia: ['groenlandia', 'inglaterra'],
+  inglaterra: ['islandia', 'suecia', 'alemania'],
+  suecia: ['inglaterra', 'moscu'],
+  alemania: ['inglaterra', 'francia', 'yugoslavia', 'argelia'],
+  francia: ['alemania', 'argelia'],
+  yugoslavia: ['alemania', 'moscu', 'egipto'],
+  moscu: ['suecia', 'yugoslavia', 'mediooriente', 'aral', 'omsk'],
+  argelia: ['francia', 'alemania', 'brasil', 'egipto', 'sudan', 'congo'],
+  egipto: ['argelia', 'sudan', 'mediooriente', 'yugoslavia'],
+  sudan: ['egipto', 'argelia', 'congo', 'sudafrica'],
+  congo: ['argelia', 'sudan', 'sudafrica'],
+  sudafrica: ['congo', 'sudan', 'madagascar'],
+  madagascar: ['sudafrica'],
+  mediooriente: ['moscu', 'aral', 'india', 'egipto'],
+  aral: ['moscu', 'omsk', 'china', 'india', 'mediooriente'],
+  omsk: ['moscu', 'dudinka', 'siberia', 'china', 'aral'],
+  dudinka: ['omsk', 'siberia'],
+  siberia: ['dudinka', 'omsk', 'china', 'chita'],
+  chita: ['siberia', 'china', 'mongolia', 'vladivostok'],
+  vladivostok: ['chita', 'mongolia', 'china', 'alaska', 'japon'],
+  mongolia: ['chita', 'vladivostok', 'china'],
+  china: ['aral', 'omsk', 'siberia', 'chita', 'mongolia', 'vladivostok', 'vietnam', 'india'],
+  india: ['mediooriente', 'aral', 'china', 'vietnam', 'sumatra'],
+  vietnam: ['india', 'china', 'borneo'],
+  japon: ['vladivostok'],
+  sumatra: ['india', 'australia'],
+  borneo: ['vietnam', 'nuevaguinea', 'australia'],
+  nuevaguinea: ['borneo', 'australia'],
+  australia: ['sumatra', 'borneo', 'nuevaguinea'],
+};
