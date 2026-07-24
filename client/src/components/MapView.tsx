@@ -69,6 +69,8 @@ interface MapViewProps {
   moveFrom: string | null;
   placementMap: Record<string, number>;
   onTerritoryClick: (territoryId: string) => void;
+  onShowCards: () => void;
+  cardCount: number;
 }
 
 export default function MapView({
@@ -81,6 +83,8 @@ export default function MapView({
   moveFrom,
   placementMap,
   onTerritoryClick,
+  onShowCards,
+  cardCount,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -287,7 +291,9 @@ export default function MapView({
                   stroke={ringColor}
                   strokeWidth={2}
                   style={{
-                    filter: glow ? `${glow} drop-shadow(0 2px 3px rgba(0,0,0,0.8))` : 'drop-shadow(0 2px 3px rgba(0,0,0,0.8))',
+                    filter: glow
+                      ? `${glow} drop-shadow(0 2px 3px rgba(0,0,0,0.8))`
+                      : "drop-shadow(0 2px 3px rgba(0,0,0,0.8))",
                     transition: "filter 0.15s, stroke 0.15s",
                   }}
                 />
@@ -391,7 +397,7 @@ export default function MapView({
         </div>
       </div>
 
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
         <button
           onClick={() => zoom(-1)}
           className="w-8 h-8 bg-stone-800/80 hover:bg-stone-700 rounded-full flex items-center justify-center text-lg font-bold"
@@ -411,6 +417,34 @@ export default function MapView({
           +
         </button>
       </div>
+
+      <button
+        onClick={onShowCards}
+        className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-end z-10 hover:scale-105 transition-transform"
+        style={{ height: "180px", width: "320px" }}
+      >
+        {Array.from({ length: Math.min(cardCount + 1, 8) }).map((_, i) => {
+          const total = Math.min(cardCount + 1, 8);
+          const angle = total > 1 ? (i / (total - 1)) * 30 - 15 : 0;
+          return (
+            <div
+              key={i}
+              className="cursor-pointer w-32 aspect-[2.5/4.0] rounded-lg shadow-lg border border-stone-600"
+              style={{
+                backgroundImage: "url(/card-back.png)",
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                transform: `rotate(${angle}deg)`,
+                transformOrigin: "bottom center",
+                marginLeft: i > 0 ? "-80px" : "0",
+                position: "absolute",
+                left: `${50 + (i - (total - 1) / 2) * 40}px`,
+                bottom: 0,
+              }}
+            />
+          );
+        })}
+      </button>
 
       {showDebug && (
         <div className="absolute top-2 left-2 bg-black/80 text-amber-400 text-xs px-2 py-1 rounded pointer-events-none z-10">

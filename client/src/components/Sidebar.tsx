@@ -45,7 +45,6 @@ export default function Sidebar({
 }: SidebarProps) {
   const [attackArmies, setAttackArmies] = useState(3);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [showObjective, setShowObjective] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -56,6 +55,7 @@ export default function Sidebar({
   }, [selectedTerritory]);
 
   const currentPlayer = pub.players[pub.turnPlayer];
+  const myCardsCount = secret.cards.length;
   const myTerritoryCount = Object.values(pub.territories).filter(
     (t) => t.owner === pub.turnPlayer,
   ).length;
@@ -139,24 +139,16 @@ export default function Sidebar({
 
         <div className="border-t border-stone-700 pt-2 text-sm text-stone-400 space-y-1">
           <p>
-            Canjes realizados:{" "}
-            <span className="text-white">{pub.exchangeCounter}</span>
-          </p>
-          <p>
             Tus territorios:{" "}
             <span className="text-white">{myTerritoryCount}</span>
           </p>
-          <button
-            onClick={() => setShowObjective(!showObjective)}
-            className="text-xs text-amber-400 underline hover:text-amber-300"
-          >
-            {showObjective ? "Ocultar objetivo" : "Mostrar objetivo"}
-          </button>
-          {showObjective && (
-            <p className="text-xs text-amber-300 bg-stone-700/50 rounded p-2 mt-1">
-              {secret.objectiveDescription}
-            </p>
-          )}
+          <p>
+            Tus cartas: <span className="text-white">{myCardsCount}</span>
+          </p>
+          <p>
+            Canjes realizados:{" "}
+            <span className="text-white">{pub.exchangeCounter}</span>
+          </p>
         </div>
 
         {isMyTurn &&
@@ -180,14 +172,16 @@ export default function Sidebar({
                   ))}
                 </div>
               )}
-              <button
-                onClick={onShowCards}
-                className="w-full py-1.5 bg-purple-700 hover:bg-purple-600 rounded text-sm font-medium transition"
-              >
-                {secret.forcedExchange
-                  ? "⚠ Debes canjear cartas (5+)"
-                  : `Canjear cartas (${secret.cards.length})`}
-              </button>
+              {secret.cards.length >= 3 && (
+                <button
+                  onClick={onShowCards}
+                  className="w-full py-1.5 bg-purple-700 hover:bg-purple-600 rounded text-sm font-medium transition"
+                >
+                  {secret.forcedExchange
+                    ? "⚠ Debes canjear cartas (5+)"
+                    : `Canjear cartas (${secret.cards.length})`}
+                </button>
+              )}
 
               {Object.keys(placementMap).length > 0 && (
                 <div className="bg-stone-700 rounded p-2 text-sm space-y-1">
@@ -300,17 +294,6 @@ export default function Sidebar({
               {secret.conqueredThisTurn
                 ? "Finalizar turno (recibir carta)"
                 : "Finalizar turno"}
-            </button>
-          </div>
-        )}
-
-        {!isMyTurn && (
-          <div className="border-t border-stone-700 pt-2">
-            <button
-              onClick={onShowCards}
-              className="w-full py-2 bg-purple-700 hover:bg-purple-600 rounded text-sm font-medium transition"
-            >
-              Ver mis cartas ({secret.cards.length})
             </button>
           </div>
         )}

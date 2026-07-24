@@ -7,7 +7,7 @@ import Sidebar from './Sidebar'
 import DiceModal from './DiceModal'
 import CardHand from './CardHand'
 import MoveModal from './MoveModal'
-import { ADJACENCY, TERRITORY_NAMES, type Card, type GamePublic, type GameSecret, type TerritoryState } from '../types'
+import { ADJACENCY, TERRITORY_NAMES, type GamePublic, type GameSecret, type TerritoryState } from '../types'
 
 export default function GameBoard() {
   const { code } = useParams<{ code: string }>()
@@ -232,6 +232,8 @@ export default function GameBoard() {
           moveFrom={moveFrom}
           placementMap={placementMap}
           onTerritoryClick={handleTerritoryClick}
+          onShowCards={() => setShowCards(true)}
+          cardCount={secret.cards.length}
         />
       </div>
 
@@ -254,11 +256,12 @@ export default function GameBoard() {
         attackTarget={attackTarget}
       />
 
-      {showCards && secret.cards.length > 0 && (
+      {showCards && (
         <CardHand
           cards={secret.cards}
-          pendingArmies={secret.pendingArmies}
+          objectiveDescription={secret.objectiveDescription}
           forcedExchange={secret.forcedExchange}
+          isMyTurn={isMyTurn}
           phase={pub.phase}
           onExchange={handleExchange}
           onClose={() => setShowCards(false)}
