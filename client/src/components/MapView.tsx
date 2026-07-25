@@ -71,6 +71,8 @@ interface MapViewProps {
   onTerritoryClick: (territoryId: string) => void;
   onShowCards: () => void;
   cardCount: number;
+  attackIntent: { from: string; to: string } | null;
+  attackArrow: { from: string; to: string } | null;
 }
 
 export default function MapView({
@@ -85,6 +87,8 @@ export default function MapView({
   onTerritoryClick,
   onShowCards,
   cardCount,
+  attackIntent,
+  attackArrow,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -353,6 +357,47 @@ export default function MapView({
             </div>
           );
         })}
+
+        {attackArrow &&
+          (() => {
+            const fromPos = TERRITORY_POSITIONS[attackArrow.from];
+            const toPos = TERRITORY_POSITIONS[attackArrow.to];
+            if (!fromPos || !toPos) return null;
+            const x1 = (fromPos.x / 100) * BOARD_W;
+            const y1 = (fromPos.y / 100) * BOARD_H;
+            const x2 = (toPos.x / 100) * BOARD_W;
+            const y2 = (toPos.y / 100) * BOARD_H;
+            return (
+              <svg
+                className="absolute inset-0 pointer-events-none"
+                width={BOARD_W}
+                height={BOARD_H}
+              >
+                <defs>
+                  <marker
+                    id="arrowhead"
+                    markerWidth="10"
+                    markerHeight="7"
+                    refX="10"
+                    refY="3.5"
+                    orient="auto"
+                  >
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#ef4444" />
+                  </marker>
+                </defs>
+                <line
+                  x1={x1}
+                  y1={y1}
+                  x2={x2}
+                  y2={y2}
+                  stroke="#ef4444"
+                  strokeWidth="5"
+                  markerEnd="url(#arrowhead)"
+                  opacity="0.8"
+                />
+              </svg>
+            );
+          })()}
 
         <div className="absolute bottom-4 left-4 bg-black/60 rounded-lg px-3 py-2 text-xs text-stone-300 pointer-events-none leading-relaxed">
           <p className="font-bold text-lg text-center text-amber-400 mb-1">

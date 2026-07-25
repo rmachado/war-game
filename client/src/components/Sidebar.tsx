@@ -19,7 +19,7 @@ interface SidebarProps {
   onRemoveArmy: (territory: string) => void;
   onPlaceArmies: () => void;
   onExchange: (cardIds: string[]) => void;
-  onAttack: (from: string, to: string, armies: number) => void;
+  onOpenAttack: () => void;
   onEndAttacks: () => void;
   onEndMoves: () => void;
   onShowCards: () => void;
@@ -37,22 +37,14 @@ export default function Sidebar({
   onAddArmy,
   onRemoveArmy,
   onPlaceArmies,
-  onAttack,
+  onOpenAttack,
   onEndAttacks,
   onEndMoves,
   onShowCards,
   attackTarget,
 }: SidebarProps) {
-  const [attackArmies, setAttackArmies] = useState(3);
   const [mobileOpen, setMobileOpen] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (selectedTerritory && pub.territories[selectedTerritory]) {
-      const max = Math.min(3, pub.territories[selectedTerritory].armies - 1);
-      setAttackArmies(Math.max(1, max));
-    }
-  }, [selectedTerritory]);
 
   const currentPlayer = pub.players[pub.turnPlayer];
   const myCardsCount = secret.cards.length;
@@ -237,36 +229,13 @@ export default function Sidebar({
             </p>
 
             {selectedTerritory && attackTarget && (
-              <div className="space-y-2">
-                <div>
-                  <label className="text-xs text-stone-400">
-                    Ejércitos atacantes (1-3)
-                  </label>
-                  <div className="flex gap-1 mt-1">
-                    {[1, 2, 3].map((n) => (
-                      <button
-                        key={n}
-                        onClick={() => setAttackArmies(n)}
-                        disabled={
-                          n >= (pub.territories[selectedTerritory]?.armies ?? 0)
-                        }
-                        className={`w-10 h-10 rounded font-bold transition ${attackArmies === n ? "bg-red-600" : "bg-stone-700 hover:bg-stone-600"} disabled:opacity-30`}
-                      >
-                        {n}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <button
-                  onClick={() =>
-                    onAttack(selectedTerritory, attackTarget, attackArmies)
-                  }
-                  disabled={loading}
-                  className="w-full py-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 rounded font-bold transition"
-                >
-                  Atacar
-                </button>
-              </div>
+              <button
+                onClick={onOpenAttack}
+                disabled={loading}
+                className="w-full py-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 rounded font-bold transition"
+              >
+                Iniciar ataque
+              </button>
             )}
 
             <button
@@ -316,7 +285,7 @@ export default function Sidebar({
           </h3>
           <div
             ref={logRef}
-            className="h-40 overflow-y-auto bg-stone-900 rounded p-2 text-xs space-y-1"
+            className="flex-1 min-h-[120px] max-h-[50vh] overflow-y-auto bg-stone-900 rounded p-2 text-xs space-y-1"
           >
             {(!pub.log || pub.log.length === 0) && (
               <p className="text-stone-500">Esperando eventos...</p>

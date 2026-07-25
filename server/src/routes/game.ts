@@ -18,16 +18,22 @@ import {
 } from "../game/engine.js";
 import { ALL_COLORS, type Color } from "../game/types.js";
 import { TERRITORY_NAMES, CONTINENTS } from "../game/map.js";
+import { broadcastGameState, broadcastAttackResult } from "../ws.js";
 
 const router = Router();
 
 function getTimeString(): string {
   const now = new Date();
-  const day = String(now.getDate()).padStart(2, '0');
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const hours = String(now.getHours()).padStart(2, '0');
-  const mins = String(now.getMinutes()).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, "0");
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const hours = String(now.getHours()).padStart(2, "0");
+  const mins = String(now.getMinutes()).padStart(2, "0");
   return `${day}/${month} ${hours}:${mins}`;
+}
+
+function saveAndBroadcast(code: string, state: any, status: string, playerCount: number) {
+  saveGame(code, state, status, playerCount);
+  broadcastGameState(code, state);
 }
 
 function getGamePlayerCount(code: string): number {
@@ -58,7 +64,7 @@ router.post("/games", (req: Request, res: Response) => {
   }
 
   const initialState = createGame([{ name, color }]);
-  saveGame(code, initialState, "waiting", playerCount);
+  saveAndBroadcast(code, initialState, "waiting", playerCount);
 
   const token = `${code}:${color}`;
   res.json({ code, token, playerIndex: 0 });
@@ -102,7 +108,7 @@ router.post("/games/:code/join", (req: Request, res: Response) => {
     cards: [],
     alive: true,
   });
-  saveGame(code, state, "waiting", maxPlayers);
+  saveAndBroadcast(code, state, "waiting", maxPlayers);
 
   const token = `${code}:${color}`;
   res.json({ code, token, playerIndex: state.players.length - 1 });
@@ -142,7 +148,7 @@ router.post("/games/:code/change-color", (req: Request, res: Response) => {
   const gameRow = getDb()
     .prepare("SELECT player_count FROM games WHERE code = ?")
     .get(code) as { player_count: number };
-  saveGame(code, state, "waiting", gameRow?.player_count ?? 6);
+  saveAndBroadcast(code, state, "waiting", gameRow?.player_count ?? 6);
   res.json({ success: true, newToken: `${code}:${color}` });
 });
 
@@ -181,7 +187,7 @@ router.post("/games/:code/start", (req: Request, res: Response) => {
     state.players.map((p) => ({ name: p.name, color: p.color })),
   );
   startFirstRound(fullGame);
-  saveGame(code, fullGame, "playing", maxPlayers);
+  saveAndBroadcast(code, fullGame, "playing", maxPlayers);
   res.json({ success: true });
 });
 
@@ -242,7 +248,7 @@ router.post("/games/:code/exchange", (req: Request, res: Response) => {
   }
 
   state.pendingArmies += result;
-  saveGame(code, state, "playing", state.players.length);
+  saveAndBroadcast(code, state, "playing", state.players.length);
   res.json({ armiesReceived: result, pendingArmies: state.pendingArmies });
 });
 
@@ -330,7 +336,7 @@ router.post("/games/:code/place-armies", (req: Request, res: Response) => {
     state.phase = "attack";
   }
 
-  saveGame(code, state, "playing", state.players.length);
+  saveAndBroadcast(code, state, "playing", state.players.length);
   res.json({ success: true, phase: state.phase });
 });
 
@@ -400,7 +406,15 @@ router.post("/games/:code/attack", (req: Request, res: Response) => {
     state.winner = playerIdx;
   }
 
-  saveGame(code, state, "playing", state.players.length);
+  saveAndBroadcast(code, state, "playing", state.players.length);
+  broadcastAttackResult(code, {
+    from, to,
+    attack: result.attack,
+    defense: result.defense,
+    attackLosses: result.attackLosses,
+    defenseLosses: result.defenseLosses,
+    conquered,
+  });
   res.json({ ...result, conquered, phase: state.phase });
 });
 
@@ -438,7 +452,7 @@ router.post("/games/:code/conquer", (req: Request, res: Response) => {
     return;
   }
 
-  saveGame(code, state, "playing", state.players.length);
+  saveAndBroadcast(code, state, "playing", state.players.length);
   res.json({ success: true, phase: state.phase });
 });
 
@@ -471,7 +485,7 @@ router.post("/games/:code/move", (req: Request, res: Response) => {
     return;
   }
 
-  saveGame(code, state, "playing", state.players.length);
+  saveAndBroadcast(code, state, "playing", state.players.length);
   res.json({ success: true });
 });
 
@@ -499,7 +513,7 @@ router.post("/games/:code/end-attacks", (req: Request, res: Response) => {
   }
 
   state.phase = "move";
-  saveGame(code, state, "playing", state.players.length);
+  saveAndBroadcast(code, state, "playing", state.players.length);
   res.json({ success: true });
 });
 
@@ -531,7 +545,7 @@ router.post("/games/:code/end-moves", (req: Request, res: Response) => {
   }
 
   endTurn(state);
-  saveGame(code, state, "playing", state.players.length);
+  saveAndBroadcast(code, state, "playing", state.players.length);
   res.json({ success: true, phase: state.phase });
 });
 

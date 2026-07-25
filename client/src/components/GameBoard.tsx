@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { useGame, useGameStore } from '../store/game'
+import { useGameSocket } from '../hooks/useGameSocket'
 import { placeArmies, exchangeCards, attack as apiAttack, conquer as apiConquer, endAttacks, endMoves, moveArmies } from '../api/game'
 import MapView from './MapView'
 import Sidebar from './Sidebar'
-import DiceModal from './DiceModal'
+import AttackModal from './AttackModal'
 import CardHand from './CardHand'
 import MoveModal from './MoveModal'
 import { ADJACENCY, TERRITORY_NAMES, type GamePublic, type GameSecret, type TerritoryState } from '../types'
@@ -18,11 +19,29 @@ export default function GameBoard() {
   const [attackTarget, setAttackTarget] = useState<string | null>(null)
   const [placementMap, setPlacementMap] = useState<Record<string, number>>({})
   const [error, setError] = useState('')
-  const [diceResult, setDiceResult] = useState<any>(null)
+  const [attackIntent, setAttackIntent] = useState<{ from: string; to: string } | null>(null)
+  const [spectatorIntent, setSpectatorIntent] = useState<{ from: string; to: string; color: string } | null>(null)
+  const [spectatorResult, setSpectatorResult] = useState<any>(null)
   const [showCards, setShowCards] = useState(false)
   const [moveFrom, setMoveFrom] = useState<string | null>(null)
   const [moveModal, setMoveModal] = useState<{ from: string; to: string } | null>(null)
   const [loading, setLoading] = useState(false)
+
+  const handleAttackIntent = useCallback((from: string | null, to: string | null, color?: string) => {
+    if (from && to) {
+      setSpectatorIntent({ from, to, color: color || '' })
+      setSpectatorResult(null)
+    } else {
+      setSpectatorIntent(null)
+      setSpectatorResult(null)
+    }
+  }, [])
+
+  const handleAttackResult = useCallback((result: any) => {
+    setSpectatorResult(result)
+  }, [])
+
+  const { sendAttackIntent } = useGameSocket(code!, token, handleAttackIntent, handleAttackResult)
 
   if (!data) return <div className="flex items-center justify-center min-h-screen text-stone-400">Cargando...</div>
 
@@ -134,18 +153,14 @@ export default function GameBoard() {
     setError('')
     try {
       const result = await apiAttack(code!, token!, from, to, armies)
-      setDiceResult({ ...result, from, to })
-
-      if (result.conquered) {
-        setSelectedTerritory(null)
-        setAttackTarget(null)
-      }
-
       refetch()
+      return result
     } catch (e: any) {
       setError(e.message)
+      return null
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   async function handleConquer(from: string, to: string, armies: number) {
@@ -153,7 +168,8 @@ export default function GameBoard() {
     setError('')
     try {
       await apiConquer(code!, token!, from, to, armies)
-      setDiceResult(null)
+      sendAttackIntent(null, null)
+      setAttackIntent(null)
       setSelectedTerritory(null)
       setAttackTarget(null)
       refetch()
@@ -234,6 +250,14 @@ export default function GameBoard() {
           onTerritoryClick={handleTerritoryClick}
           onShowCards={() => setShowCards(true)}
           cardCount={secret.cards.length}
+          attackIntent={attackIntent}
+          attackArrow={
+            (spectatorIntent?.from && spectatorIntent?.to)
+              ? { from: spectatorIntent.from, to: spectatorIntent.to }
+              : (isMyTurn && selectedTerritory && attackTarget)
+                ? { from: selectedTerritory, to: attackTarget }
+                : null
+          }
         />
       </div>
 
@@ -249,7 +273,12 @@ export default function GameBoard() {
         onRemoveArmy={removeArmy}
         onPlaceArmies={handlePlaceArmies}
         onExchange={handleExchange}
-        onAttack={handleAttack}
+        onOpenAttack={() => {
+          if (selectedTerritory && attackTarget) {
+            sendAttackIntent(selectedTerritory, attackTarget)
+            setAttackIntent({ from: selectedTerritory, to: attackTarget })
+          }
+        }}
         onEndAttacks={handleEndAttacks}
         onEndMoves={handleEndMoves}
         onShowCards={() => setShowCards(true)}
@@ -268,16 +297,40 @@ export default function GameBoard() {
         />
       )}
 
-      {diceResult && (
-        <DiceModal
-          result={diceResult}
-          territories={pub.territories}
-          players={pub.players}
-          turnPlayer={pub.turnPlayer}
-          onConquer={(armies) => handleConquer(diceResult.from, diceResult.to, armies)}
-          onClose={() => setDiceResult(null)}
+      {attackIntent && (
+        <AttackModal
+          from={attackIntent.from}
+          to={attackIntent.to}
+          fromArmies={pub.territories[attackIntent.from]?.armies ?? 0}
+          toArmies={pub.territories[attackIntent.to]?.armies ?? 0}
+          attackerName={secret.name}
+          defenderName={pub.players[pub.territories[attackIntent.to]?.owner]?.name || '?'}
+          readonly={false}
+          onAttack={handleAttack}
+          onConquer={handleConquer}
+          onClose={() => {
+            sendAttackIntent(null, null)
+            setAttackIntent(null)
+          }}
         />
       )}
+
+      {!attackIntent && spectatorIntent && spectatorIntent.color !== token?.split(':')[1] && (
+        <AttackModal
+          from={spectatorIntent.from}
+          to={spectatorIntent.to}
+          fromArmies={pub.territories[spectatorIntent.from]?.armies ?? 0}
+          toArmies={pub.territories[spectatorIntent.to]?.armies ?? 0}
+          attackerName={pub.players.find(p => p.color === spectatorIntent.color)?.name || '?'}
+          defenderName={pub.players[pub.territories[spectatorIntent.to]?.owner]?.name || '?'}
+          readonly={true}
+          spectatorResult={spectatorResult}
+          onClose={() => {}}
+        />
+      )}
+
+
+
 
       {moveModal && (
         <MoveModal

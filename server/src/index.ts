@@ -1,9 +1,11 @@
 import express from "express";
 import cors from "cors";
 import path from "path";
+import http from "http";
 import { fileURLToPath } from "url";
 import gameRouter from "./routes/game.js";
 import { closeDb } from "./db.js";
+import { createWSServer } from "./ws.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -24,8 +26,11 @@ if (!isDev) {
   });
 }
 
-const server = app.listen(PORT, () => {
-  console.log(`war server running on http://localhost:${PORT}`);
+const server = http.createServer(app);
+createWSServer(server);
+
+server.listen(PORT, () => {
+  console.log(`WAR server running on http://localhost:${PORT}`);
 });
 
 function shutdown() {

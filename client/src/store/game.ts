@@ -27,9 +27,9 @@ export const useGameStore = create<GameStore>((set) => ({
 
 export function useGame(code: string | null, token: string | null) {
   return useQuery<GameStateResponse>({
-    queryKey: ["game", code],
+    queryKey: ['game', code],
     queryFn: () => getGameState(code!, token!),
     enabled: !!code && !!token,
-    refetchInterval: 5000,
+    staleTime: Infinity,
   });
 }
