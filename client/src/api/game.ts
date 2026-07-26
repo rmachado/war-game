@@ -31,6 +31,13 @@ export function joinGame(code: string, name: string, color: string) {
   });
 }
 
+export function rejoinGame(code: string, color: string) {
+  return request(`/games/${code}/rejoin`, {
+    method: 'POST',
+    body: JSON.stringify({ color }),
+  });
+}
+
 export function startGame(code: string, token: string) {
   return request(`/games/${code}/start`, {
     method: 'POST',
@@ -63,10 +70,10 @@ export function attack(code: string, token: string, from: string, to: string, ar
   });
 }
 
-export function conquer(code: string, token: string, from: string, to: string, armies: number) {
+export function conquer(code: string, token: string, armies: number) {
   return request(`/games/${code}/conquer`, {
     method: 'POST',
-    body: JSON.stringify({ token, from, to, armies }),
+    body: JSON.stringify({ token, armies }),
   });
 }
 

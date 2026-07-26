@@ -19,8 +19,13 @@ import {
 import { ALL_COLORS, type Color } from "../game/types.js";
 import { TERRITORY_NAMES, CONTINENTS } from "../game/map.js";
 import { broadcastGameState, broadcastAttackResult } from "../ws.js";
+import { getGameData } from "../game/game-data.js";
 
 const router = Router();
+
+router.get("/game-data", (_req: Request, res: Response) => {
+  res.json(getGameData());
+});
 
 function getTimeString(): string {
   const now = new Date();
@@ -85,7 +90,7 @@ router.post("/games/:code/join", (req: Request, res: Response) => {
   }
 
   if (state.phase !== "lobby") {
-    res.status(400).json({ error: "El juego ya comenzó" });
+    res.status(400).json({ error: "El juego ya comenzó. Usa el nombre de jugador que usaste al unirte." });
     return;
   }
 
@@ -112,6 +117,40 @@ router.post("/games/:code/join", (req: Request, res: Response) => {
 
   const token = `${code}:${color}`;
   res.json({ code, token, playerIndex: state.players.length - 1 });
+});
+
+router.post("/games/:code/rejoin", (req: Request, res: Response) => {
+  const { code } = req.params;
+  const { color } = req.body;
+  if (!color) {
+    res.status(400).json({ error: "Color requerido" });
+    return;
+  }
+
+  const state = loadGame(code);
+  if (!state) {
+    res.status(404).json({ error: "Juego no encontrado" });
+    return;
+  }
+
+  if (state.phase === "lobby") {
+    res.status(400).json({ error: "El juego aún no comenzó. Usa la opción Unirse." });
+    return;
+  }
+
+  const player = state.players.find((p) => p.color === color);
+  if (!player) {
+    res.status(400).json({ error: "No hay un jugador con ese color en este juego" });
+    return;
+  }
+
+  if (!player.alive) {
+    res.status(400).json({ error: "Este jugador ya fue eliminado" });
+    return;
+  }
+
+  const token = `${code}:${color}`;
+  res.json({ code, token, name: player.name, color: player.color });
 });
 
 router.post("/games/:code/change-color", (req: Request, res: Response) => {
@@ -392,6 +431,7 @@ router.post("/games/:code/attack", (req: Request, res: Response) => {
   let conquered = false;
   if (state.territories[to].armies <= 0) {
     conquered = true;
+    state.pendingConquest = { from, to };
   }
 
   const p = state.players[playerIdx];
@@ -420,7 +460,7 @@ router.post("/games/:code/attack", (req: Request, res: Response) => {
 
 router.post("/games/:code/conquer", (req: Request, res: Response) => {
   const { code } = req.params;
-  const { token, from, to, armies } = req.body;
+  const { token, armies } = req.body;
 
   const state = loadGame(code);
   if (!state) {
@@ -436,13 +476,21 @@ router.post("/games/:code/conquer", (req: Request, res: Response) => {
     return;
   }
 
-  if (state.phase !== "attack") {
-    res.status(400).json({ error: "No estás en fase de ataque" });
+  if (!state.pendingConquest) {
+    res.status(400).json({ error: "No hay conquista pendiente" });
     return;
   }
 
+  const { from, to } = state.pendingConquest;
+
   if (state.territories[to].armies !== 0) {
     res.status(400).json({ error: "El territorio aún tiene defensores" });
+    return;
+  }
+
+  const maxMove = Math.min(3, state.territories[from].armies - 1);
+  if (armies < 1 || armies > maxMove) {
+    res.status(400).json({ error: `Debes mover entre 1 y ${maxMove} ejércitos` });
     return;
   }
 
@@ -451,6 +499,8 @@ router.post("/games/:code/conquer", (req: Request, res: Response) => {
     res.status(400).json({ error: "Movimiento de conquista inválido" });
     return;
   }
+
+  state.pendingConquest = null;
 
   saveAndBroadcast(code, state, "playing", state.players.length);
   res.json({ success: true, phase: state.phase });

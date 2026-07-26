@@ -1,4 +1,6 @@
-import { TERRITORY_NAMES, type Card, type CardSymbol } from "../types";
+import type { Card } from "../types";
+import { useTerritoryName } from "../hooks/useGameData";
+import { Check } from "lucide-react";
 
 const SHAPE_SVGS: Record<string, string> = {
   triangulo: `<svg viewBox="0 0 24 24" width="48" height="48"><polygon points="12,2 22,20 2,20" fill="black"/></svg>`,
@@ -32,13 +34,14 @@ export default function TerritoryCard({
   onToggle,
 }: TerritoryCardProps) {
   const isJoker = card.symbol === "joker";
-  const territoryName = TERRITORY_NAMES[card.id];
+  const tn = useTerritoryName();
+  const territoryName = tn(card.id);
 
   return (
     <button
       onClick={() => (canExchange ? onToggle(card.id) : undefined)}
       disabled={!canExchange && !isSelected}
-      className={`relative aspect-[2.5/4.0] rounded-xl border-2 transition-all overflow-hidden ${
+      className={`relative w-40 aspect-[2.5/4.0] rounded-xl border-2 transition-all overflow-hidden ${
         isSelected
           ? "border-amber-400 shadow-lg shadow-amber-400/30 scale-[1.03]"
           : "border-stone-600 hover:border-stone-400"
@@ -79,7 +82,7 @@ export default function TerritoryCard({
       )}
       {isSelected && (
         <div className="absolute top-2 right-2 w-6 h-6 bg-amber-400 rounded-full flex items-center justify-center text-black text-xs font-bold shadow-lg">
-          &#10003;
+          <Check size={14} strokeWidth={3} />
         </div>
       )}
     </button>

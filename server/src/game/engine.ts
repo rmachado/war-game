@@ -106,6 +106,7 @@ export function createGame(
     forcedExchange: false,
     winner: null,
     log: [],
+    pendingConquest: null,
   };
 }
 
@@ -551,6 +552,7 @@ export function getPublicState(state: GameState, playerIdx: number) {
     winner: state.winner,
     playerCount: state.players.length,
     log: state.log,
+    pendingConquest: state.pendingConquest,
   };
 }
 

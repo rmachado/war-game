@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import {
   COLOR_MAP,
   COLOR_NAMES,
-  TERRITORY_NAMES,
   type GamePublic,
   type GameSecret,
 } from "../types";
+import { useTerritoryName } from "../hooks/useGameData";
+import { Menu, X, Skull } from "lucide-react";
 
 interface SidebarProps {
   pub: GamePublic;
@@ -43,6 +44,7 @@ export default function Sidebar({
   onShowCards,
   attackTarget,
 }: SidebarProps) {
+  const tn = useTerritoryName();
   const [mobileOpen, setMobileOpen] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
 
@@ -84,7 +86,7 @@ export default function Sidebar({
           {isMe ? " (tú)" : ""}
         </span>
         <span className="text-xs text-stone-400">{p.cardCount} cartas</span>
-        {!p.alive && <span className="text-xs text-red-400">✖</span>}
+          {!p.alive && <Skull size={14} className="text-red-400" />}
       </div>
     );
   }
@@ -95,7 +97,7 @@ export default function Sidebar({
         className="lg:hidden fixed bottom-4 right-4 z-50 bg-amber-600 w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-lg"
         onClick={() => setMobileOpen(!mobileOpen)}
       >
-        {mobileOpen ? "✕" : "☰"}
+        {mobileOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
       <div
@@ -179,7 +181,7 @@ export default function Sidebar({
                 <div className="bg-stone-700 rounded p-2 text-sm space-y-1">
                   {Object.entries(placementMap).map(([id, count]) => (
                     <div key={id} className="flex items-center justify-between">
-                      <span>{TERRITORY_NAMES[id]}</span>
+                      <span>{tn(id)}</span>
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => onRemoveArmy(id)}
@@ -223,8 +225,8 @@ export default function Sidebar({
             <p className="text-xs text-stone-400">
               {selectedTerritory
                 ? attackTarget
-                  ? `Atacar ${TERRITORY_NAMES[attackTarget]} desde ${TERRITORY_NAMES[selectedTerritory]}`
-                  : `Origen: ${TERRITORY_NAMES[selectedTerritory]}. Elige un blanco enemigo adyacente.`
+                  ? `Atacar ${tn(attackTarget)} desde ${tn(selectedTerritory)}`
+                  : `Origen: ${tn(selectedTerritory)}. Elige un blanco enemigo adyacente.`
                 : "Elige tu territorio para atacar (mín. 2 ejércitos)"}
             </p>
 

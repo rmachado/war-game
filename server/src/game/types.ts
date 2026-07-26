@@ -39,6 +39,7 @@ export interface GameState {
   forcedExchange: boolean;      // player has 5+ cards, must exchange
   winner: number | null;
   log: LogEntry[];
+  pendingConquest: { from: string; to: string } | null;
 }
 
 export interface LogEntry {

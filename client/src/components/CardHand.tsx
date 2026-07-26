@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Card, GamePhase } from "../types";
 import TerritoryCard from "./TerritoryCard";
 import ObjectiveCard from "./ObjectiveCard";
+import { X } from "lucide-react";
 
 interface CardHandProps {
   cards: Card[];
@@ -53,7 +54,7 @@ export default function CardHand({
             onClick={onClose}
             className="text-stone-400 hover:text-white text-2xl leading-none"
           >
-            &times;
+            <X size={24} className="text-stone-400 hover:text-white" />
           </button>
         </div>
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { createGame, joinGame } from "../api/game";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { createGame, joinGame, rejoinGame } from "../api/game";
 import { useGameStore } from "../store/game";
 import { ALL_COLORS, COLOR_NAMES, COLOR_MAP } from "../types";
 
@@ -45,21 +45,29 @@ export default function Home() {
   }
 
   async function handleJoin() {
-    if (!name.trim() || !joinCode.trim()) {
-      setError("Llena todos los campos");
+    if (!joinCode.trim()) {
+      setError("Ingresa el código del juego");
       return;
     }
     setLoading(true);
     setError("");
     try {
-      const data = await joinGame(
-        joinCode.trim().toUpperCase(),
-        name.trim(),
-        color,
-      );
-      localStorage.setItem("war_name", name.trim());
-      setSession(data.code, data.token);
-      navigate(`/game/${data.code}`);
+      const cleanedCode = joinCode.trim().toUpperCase();
+      try {
+        const data = await joinGame(cleanedCode, name.trim() || "Jugador", color);
+        localStorage.setItem("war2_name", name.trim());
+        setSession(data.code, data.token);
+        navigate(`/game/${data.code}`);
+      } catch (e: any) {
+        if (e.message?.includes("ya comenzó") || e.message?.includes("comenzó")) {
+          const data = await rejoinGame(cleanedCode, color);
+          localStorage.setItem("war2_name", data.name);
+          setSession(data.code, data.token);
+          navigate(`/game/${data.code}`);
+        } else {
+          throw e;
+        }
+      }
     } catch (e: any) {
       setError(e.message);
     }
@@ -72,7 +80,12 @@ export default function Home() {
         <h1 className="text-4xl font-bold text-center mb-2 tracking-wider">
           WAR
         </h1>
-        <p className="text-stone-400 text-center mb-8">Juego de estrategia</p>
+        <p className="text-stone-400 text-center mb-2">Juego de estrategia</p>
+        <p className="text-center mb-8">
+          <Link to="/rules" className="text-amber-400 hover:text-amber-300 text-sm underline underline-offset-2">
+            Ver reglas del juego
+          </Link>
+        </p>
 
         <div className="flex gap-2 mb-6">
           <button

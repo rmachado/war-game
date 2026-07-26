@@ -4,6 +4,7 @@ import { useGame, useGameStore } from '../store/game'
 import { startGame } from '../api/game'
 import { COLOR_MAP, COLOR_NAMES, ALL_COLORS, type Color } from '../types'
 import GameBoard from './GameBoard'
+import { Copy, Play } from 'lucide-react'
 
 export default function Lobby() {
   const { code } = useParams<{ code: string }>()
@@ -76,9 +77,9 @@ export default function Lobby() {
           <p className="text-sm text-stone-500 text-center mt-2">Comparte este código con los demás jugadores</p>
           <button
             onClick={handleCopyLink}
-            className="w-full mt-3 py-2 bg-stone-700 hover:bg-stone-600 rounded text-sm font-medium transition"
+            className="w-full mt-3 py-2 bg-stone-700 hover:bg-stone-600 rounded text-sm font-medium transition flex items-center justify-center gap-2"
           >
-            Copiar enlace de invitación
+            <Copy size={16} /> Copiar enlace de invitación
           </button>
         </div>
 
@@ -126,9 +127,9 @@ export default function Lobby() {
           <button
             onClick={handleStart}
             disabled={!allColorsUnique}
-            className="w-full py-3 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 rounded-lg font-bold text-lg transition"
+            className="w-full py-3 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 rounded-lg font-bold text-lg transition flex items-center justify-center gap-2"
           >
-            Iniciar juego
+            <Play size={20} /> Iniciar juego
           </button>
         )}
         {!isCreator && (

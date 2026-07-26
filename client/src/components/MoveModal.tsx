@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { TERRITORY_NAMES } from '../types'
+import { useTerritoryName } from '../hooks/useGameData'
+import { X, ArrowRight, Minus, Plus } from 'lucide-react'
 
 interface MoveModalProps {
   from: string
@@ -11,13 +12,14 @@ interface MoveModalProps {
 
 export default function MoveModal({ from, to, maxArmies, onMove, onClose }: MoveModalProps) {
   const [count, setCount] = useState(1)
+  const tn = useTerritoryName()
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
       <div className="bg-stone-800 rounded-xl max-w-sm w-full p-6 space-y-4" onClick={e => e.stopPropagation()}>
         <h3 className="text-xl font-bold text-center">Mover ejércitos</h3>
         <p className="text-sm text-stone-300 text-center">
-          {TERRITORY_NAMES[from]} → {TERRITORY_NAMES[to]}
+          {tn(from)} → {tn(to)}
         </p>
 
         <div className="space-y-2">

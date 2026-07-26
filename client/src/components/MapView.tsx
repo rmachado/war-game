@@ -1,13 +1,17 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import {
-  TERRITORY_NAMES,
   COLOR_MAP,
-  TABLE_I,
-  TABLE_II,
   type PlayerPublic,
   type TerritoryState,
   type GamePhase,
 } from "../types";
+import {
+  useTerritoryNames,
+  useContinents,
+  useExchangeTable,
+} from "../hooks/useGameData";
+
+import { ZoomIn, ZoomOut, Maximize } from "lucide-react";
 
 const BOARD_W = 1920;
 const BOARD_H = 1281;
@@ -91,6 +95,9 @@ export default function MapView({
   attackArrow,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const territoryNames = useTerritoryNames();
+  const continents = useContinents();
+  const exchangeTable = useExchangeTable();
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
@@ -243,7 +250,7 @@ export default function MapView({
           draggable={false}
         />
 
-        {Object.keys(TERRITORY_NAMES).map((id) => {
+        {Object.keys(territoryNames).map((id) => {
           const pos = TERRITORY_POSITIONS[id];
           if (!pos) return null;
 
@@ -346,7 +353,7 @@ export default function MapView({
                   padding: "2px 4px",
                 }}
               >
-                {TERRITORY_NAMES[id]}
+                {territoryNames[id].name}
               </div>
 
               {showPlaced && (
@@ -407,13 +414,37 @@ export default function MapView({
             style={{ borderSpacing: "8px 4px", borderCollapse: "separate" }}
           >
             <tbody>
-              {TABLE_I.map((row, i) => (
-                <tr key={i}>
-                  {row.map((cell, j) => (
-                    <td key={`${i}-${j}`}>{cell}</td>
-                  ))}
-                </tr>
-              ))}
+              {Object.keys(exchangeTable.values).length > 0 && (
+                <>
+                  {Object.entries(exchangeTable.values)
+                    .sort(([a], [b]) => Number(a) - Number(b))
+                    .map(([k, v]) => {
+                      const labels: Record<string, string> = {
+                        "1": "er",
+                        "2": "do",
+                        "3": "er",
+                        "4": "to",
+                        "5": "to",
+                        "6": "to",
+                        "7": "mo",
+                      };
+                      const suffix = labels[k] || "to";
+                      return (
+                        <tr key={k}>
+                          <td>
+                            {k}
+                            {suffix} Canje
+                          </td>
+                          <td>{v} ejércitos</td>
+                        </tr>
+                      );
+                    })}
+                  <tr>
+                    <td>Sucesivamente</td>
+                    <td>+{exchangeTable.increment} ejércitos</td>
+                  </tr>
+                </>
+              )}
             </tbody>
           </table>
         </div>
@@ -426,40 +457,35 @@ export default function MapView({
             style={{ borderSpacing: "8px 4px", borderCollapse: "separate" }}
           >
             <tbody>
-              {TABLE_II.map(({ continent, bonus }) => (
-                <tr key={continent}>
-                  <td>{continent}</td>
-                  <td>+{bonus} ejércitos</td>
+              {Object.entries(continents).map(([, c]) => (
+                <tr key={c.name}>
+                  <td>{c.name}</td>
+                  <td>+{c.bonus} ejércitos</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {/* {TABLE_II.map(({ continent, bonus }) => (
-            <p key={continent}>
-              {continent}: +{bonus} ejércitos
-            </p>
-          ))} */}
         </div>
       </div>
 
       <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
         <button
           onClick={() => zoom(-1)}
-          className="w-8 h-8 bg-stone-800/80 hover:bg-stone-700 rounded-full flex items-center justify-center text-lg font-bold"
+          className="w-8 h-8 bg-stone-800/80 hover:bg-stone-700 rounded-full flex items-center justify-center"
         >
-          −
+          <ZoomOut size={18} />
         </button>
         <button
           onClick={fitBoard}
-          className="px-3 h-8 bg-stone-800/80 hover:bg-stone-700 rounded-full text-xs font-medium"
+          className="px-3 h-8 bg-stone-800/80 hover:bg-stone-700 rounded-full flex items-center gap-1 text-xs font-medium"
         >
-          Ajustar
+          <Maximize size={14} /> Ajustar
         </button>
         <button
           onClick={() => zoom(1)}
-          className="w-8 h-8 bg-stone-800/80 hover:bg-stone-700 rounded-full flex items-center justify-center text-lg font-bold"
+          className="w-8 h-8 bg-stone-800/80 hover:bg-stone-700 rounded-full flex items-center justify-center"
         >
-          +
+          <ZoomIn size={18} />
         </button>
       </div>
 

@@ -8,7 +8,8 @@ import Sidebar from './Sidebar'
 import AttackModal from './AttackModal'
 import CardHand from './CardHand'
 import MoveModal from './MoveModal'
-import { ADJACENCY, TERRITORY_NAMES, type GamePublic, type GameSecret, type TerritoryState } from '../types'
+import { COLOR_MAP, type GamePublic, type GameSecret, type TerritoryState } from '../types'
+import { useTerritoryName, useNeighbors } from '../hooks/useGameData'
 
 export default function GameBoard() {
   const { code } = useParams<{ code: string }>()
@@ -42,6 +43,9 @@ export default function GameBoard() {
   }, [])
 
   const { sendAttackIntent } = useGameSocket(code!, token, handleAttackIntent, handleAttackResult)
+
+  const tn = useTerritoryName()
+  const neighborsOf = useNeighbors()
 
   if (!data) return <div className="flex items-center justify-center min-h-screen text-stone-400">Cargando...</div>
 
@@ -115,9 +119,9 @@ export default function GameBoard() {
         setSelectedTerritory(select => select === territoryId ? null : territoryId)
         setAttackTarget(null)
       } else if (!isMine && selectedTerritory) {
-        const neighbors = ADJACENCY[selectedTerritory] || []
+        const neighbors = neighborsOf(selectedTerritory)
         if (!neighbors.includes(territoryId)) {
-          setError(`${TERRITORY_NAMES[territoryId]} no es adyacente a ${TERRITORY_NAMES[selectedTerritory]}`)
+          setError(`${tn(territoryId)} no es adyacente a ${tn(selectedTerritory)}`)
           return
         }
         setAttackTarget(territoryId)
@@ -130,9 +134,9 @@ export default function GameBoard() {
         setMoveFrom(territoryId)
         setSelectedTerritory(territoryId)
       } else if (moveFrom && isMine && territoryId !== moveFrom) {
-        const neighbors = ADJACENCY[moveFrom] || []
+        const neighbors = neighborsOf(moveFrom)
         if (!neighbors.includes(territoryId)) {
-          setError(`${TERRITORY_NAMES[territoryId]} no es adyacente a ${TERRITORY_NAMES[moveFrom]}`)
+          setError(`${tn(territoryId)} no es adyacente a ${tn(moveFrom)}`)
           setMoveFrom(null)
           setSelectedTerritory(null)
           return
@@ -163,15 +167,12 @@ export default function GameBoard() {
     }
   }
 
-  async function handleConquer(from: string, to: string, armies: number) {
+  async function handleMove(from: string, to: string, count: number = 1) {
     setLoading(true)
     setError('')
     try {
-      await apiConquer(code!, token!, from, to, armies)
-      sendAttackIntent(null, null)
-      setAttackIntent(null)
-      setSelectedTerritory(null)
-      setAttackTarget(null)
+      await moveArmies(code!, token!, from, to, count)
+      setMoveModal(null)
       refetch()
     } catch (e: any) {
       setError(e.message)
@@ -179,12 +180,15 @@ export default function GameBoard() {
     setLoading(false)
   }
 
-  async function handleMove(from: string, to: string, count: number = 1) {
+  async function handleConquer(armies: number) {
     setLoading(true)
     setError('')
     try {
-      await moveArmies(code!, token!, from, to, count)
-      setMoveModal(null)
+      await apiConquer(code!, token!, armies)
+      sendAttackIntent(null, null)
+      setAttackIntent(null)
+      setSelectedTerritory(null)
+      setAttackTarget(null)
       refetch()
     } catch (e: any) {
       setError(e.message)
@@ -304,7 +308,9 @@ export default function GameBoard() {
           fromArmies={pub.territories[attackIntent.from]?.armies ?? 0}
           toArmies={pub.territories[attackIntent.to]?.armies ?? 0}
           attackerName={secret.name}
+          attackerColor={COLOR_MAP[pub.players[pub.turnPlayer]?.color] || '#dc2626'}
           defenderName={pub.players[pub.territories[attackIntent.to]?.owner]?.name || '?'}
+          defenderColor={COLOR_MAP[pub.players[pub.territories[attackIntent.to]?.owner]?.color] || '#eab308'}
           readonly={false}
           onAttack={handleAttack}
           onConquer={handleConquer}
@@ -315,6 +321,22 @@ export default function GameBoard() {
         />
       )}
 
+      {!attackIntent && pub.pendingConquest && isMyTurn && (
+        <AttackModal
+          from={pub.pendingConquest.from}
+          to={pub.pendingConquest.to}
+          fromArmies={pub.territories[pub.pendingConquest.from]?.armies ?? 0}
+          toArmies={pub.territories[pub.pendingConquest.to]?.armies ?? 0}
+          attackerName={secret.name}
+          attackerColor={COLOR_MAP[pub.players[pub.turnPlayer]?.color] || '#dc2626'}
+          defenderName={pub.players[pub.territories[pub.pendingConquest.to]?.owner]?.name || '?'}
+          defenderColor={COLOR_MAP[pub.players[pub.territories[pub.pendingConquest.to]?.owner]?.color] || '#eab308'}
+          readonly={false}
+          onConquer={handleConquer}
+          onClose={() => {}}
+        />
+      )}
+
       {!attackIntent && spectatorIntent && spectatorIntent.color !== token?.split(':')[1] && (
         <AttackModal
           from={spectatorIntent.from}
@@ -322,7 +344,9 @@ export default function GameBoard() {
           fromArmies={pub.territories[spectatorIntent.from]?.armies ?? 0}
           toArmies={pub.territories[spectatorIntent.to]?.armies ?? 0}
           attackerName={pub.players.find(p => p.color === spectatorIntent.color)?.name || '?'}
+          attackerColor={COLOR_MAP[spectatorIntent.color as keyof typeof COLOR_MAP] || '#dc2626'}
           defenderName={pub.players[pub.territories[spectatorIntent.to]?.owner]?.name || '?'}
+          defenderColor={COLOR_MAP[pub.players[pub.territories[spectatorIntent.to]?.owner]?.color] || '#eab308'}
           readonly={true}
           spectatorResult={spectatorResult}
           onClose={() => {}}

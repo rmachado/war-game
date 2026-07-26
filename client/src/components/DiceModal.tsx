@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { TERRITORY_NAMES, type PlayerPublic, type TerritoryState } from '../types'
+import { type PlayerPublic, type TerritoryState } from '../types'
+import { useTerritoryName } from '../hooks/useGameData'
 
 interface DiceModalProps {
   result: {
@@ -19,6 +20,7 @@ interface DiceModalProps {
 }
 
 export default function DiceModal({ result, territories, players, turnPlayer, onConquer, onClose }: DiceModalProps) {
+  const tn = useTerritoryName();
   const [conquerCount, setConquerCount] = useState(1)
   const fromArmies = territories[result.from]?.armies ?? 0
   const maxMove = Math.min(result.attack.length, fromArmies - 1)
@@ -47,7 +49,7 @@ export default function DiceModal({ result, territories, players, turnPlayer, on
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
       <div className="bg-stone-800 rounded-xl max-w-sm w-full p-6 space-y-4" onClick={e => e.stopPropagation()}>
         <h3 className="text-xl font-bold text-center">
-          Batalla: {TERRITORY_NAMES[result.from]} → {TERRITORY_NAMES[result.to]}
+          Batalla: {tn(result.from)} → {tn(result.to)}
         </h3>
 
         <div className="grid grid-cols-2 gap-4">
