@@ -135,6 +135,20 @@ export default function MapView({
     return () => window.removeEventListener("keydown", handleKey);
   }, [fitBoard]);
 
+  const lastPinchDist = useRef(0);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    function onWheel(e: WheelEvent) {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      zoom(e.deltaY > 0 ? -1 : 1, e.clientX - rect.left, e.clientY - rect.top);
+    }
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
   function zoom(delta: number, cx?: number, cy?: number) {
     setScale((prev) => {
       const next = Math.max(
@@ -150,13 +164,6 @@ export default function MapView({
       }
       return next;
     });
-  }
-
-  function handleWheel(e: React.WheelEvent) {
-    e.preventDefault();
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    zoom(e.deltaY > 0 ? -1 : 1, e.clientX - rect.left, e.clientY - rect.top);
   }
 
   function handleMouseDown(e: React.MouseEvent) {
@@ -224,13 +231,38 @@ export default function MapView({
   return (
     <div
       ref={containerRef}
-      className="w-full h-full bg-stone-950 overflow-hidden relative select-none"
-      onWheel={handleWheel}
+      className="w-full h-full bg-stone-950 overflow-hidden relative select-none touch-none"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
-      onClick={handleMapClick}
+      onTouchStart={(e) => {
+        if (e.touches.length === 1) {
+          setDragging(true);
+          setDragStart({ x: e.touches[0].clientX - offset.x, y: e.touches[0].clientY - offset.y });
+        } else if (e.touches.length === 2) {
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          lastPinchDist.current = Math.hypot(dx, dy);
+        }
+      }}
+      onTouchMove={(e) => {
+        if (e.touches.length === 2 && lastPinchDist.current > 0) {
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          const dist = Math.hypot(dx, dy);
+          const delta = (dist - lastPinchDist.current) / 20;
+          lastPinchDist.current = dist;
+          const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+          const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+          const rect = containerRef.current?.getBoundingClientRect();
+          if (rect) zoom(delta > 0 ? 1 : -1, midX - rect.left, midY - rect.top);
+        } else if (e.touches.length === 1 && dragging) {
+          setOffset({ x: e.touches[0].clientX - dragStart.x, y: e.touches[0].clientY - dragStart.y });
+        }
+      }}
+      onTouchEnd={() => { setDragging(false); lastPinchDist.current = 0; }}
+      onTouchCancel={() => { setDragging(false); lastPinchDist.current = 0; }}
     >
       <div
         className="absolute"
