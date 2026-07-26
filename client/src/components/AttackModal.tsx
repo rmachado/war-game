@@ -89,12 +89,13 @@ export default function AttackModal({
 
   const effectiveResult = readonly ? spectatorResult : result;
 
-  const conquerMax = effectiveResult?.conquered ? Math.min(attackingArmies, fromArmies - 1) : 0;
+  const isConquered = effectiveResult?.conquered || (toArmies === 0 && !readonly);
+  const conquerMax = isConquered ? Math.min(attackingArmies, fromArmies - 1) : 0;
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-      onClick={effectiveResult?.conquered ? undefined : onClose}
+      onClick={isConquered ? undefined : onClose}
     >
       <div
         className="bg-stone-800 rounded-2xl max-w-lg w-full p-6 space-y-4"
@@ -127,7 +128,7 @@ export default function AttackModal({
           </div>
         </div>
 
-        {!effectiveResult?.conquered && !readonly && (
+        {!isConquered && !readonly && (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-stone-400">Ejércitos atacantes</span>
@@ -235,7 +236,7 @@ export default function AttackModal({
           </div>
         </div>
 
-         {effectiveResult?.conquered && (
+         {isConquered && (
            <div className="bg-green-900/30 border border-green-600 rounded-lg p-4 text-center space-y-3">
              <p className="text-green-400 font-bold text-lg">
                ¡Territorio conquistado!
@@ -275,7 +276,7 @@ export default function AttackModal({
            </div>
          )}
 
-         {!effectiveResult?.conquered && !readonly && (
+         {!isConquered && !readonly && (
            <div className="flex gap-2">
              <button
                onClick={onClose}
@@ -293,7 +294,7 @@ export default function AttackModal({
            </div>
          )}
 
-         {effectiveResult?.conquered && (
+         {isConquered && (
            <button
              onClick={onClose}
              className="w-full py-2 bg-stone-700 hover:bg-stone-600 rounded-lg font-medium transition"

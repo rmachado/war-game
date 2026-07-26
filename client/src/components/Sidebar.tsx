@@ -86,7 +86,7 @@ export default function Sidebar({
           {isMe ? " (tú)" : ""}
         </span>
         <span className="text-xs text-stone-400">{p.cardCount} cartas</span>
-          {!p.alive && <Skull size={14} className="text-red-400" />}
+        {!p.alive && <Skull size={14} className="text-red-400" />}
       </div>
     );
   }
@@ -122,7 +122,7 @@ export default function Sidebar({
 
         <div className="border-t border-stone-700 pt-2">
           <h3 className="text-sm font-semibold text-stone-400 mb-1">
-            Orden de turno
+            Siguientes turnos
           </h3>
           <div className="space-y-0.5">
             {turnOrder.map((playerIdx, orderIdx) =>
