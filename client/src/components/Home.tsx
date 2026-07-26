@@ -75,23 +75,35 @@ export default function Home() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen p-4">
-      <div className="w-full max-w-md">
-        <h1 className="text-4xl font-bold text-center mb-2 tracking-wider">
-          WAR
-        </h1>
-        <p className="text-stone-400 text-center mb-2">Juego de estrategia</p>
-        <p className="text-center mb-8">
-          <Link to="/rules" className="text-amber-400 hover:text-amber-300 text-sm underline underline-offset-2">
-            Ver reglas del juego
-          </Link>
-        </p>
+    <div className="relative flex items-center justify-center min-h-screen p-4 overflow-hidden">
+      <div className="absolute inset-0 bg-stone-950">
+        <img
+          src="/board.png"
+          alt=""
+          className="w-full h-full object-cover opacity-20 select-none"
+          draggable={false}
+        />
+      </div>
+      <div className="absolute inset-0 bg-gradient-to-b from-stone-950/80 via-stone-950/40 to-stone-950/80" />
+      <div className="absolute inset-0 backdrop-blur-[6px]" />
 
-        <div className="flex gap-2 mb-6">
-          <button
-            onClick={() => setMode("create")}
-            className={`flex-1 py-2 rounded-lg font-medium transition ${mode === "create" ? "bg-amber-600" : "bg-stone-700 hover:bg-stone-600"}`}
-          >
+      <div className="relative w-full max-w-md">
+        <div className="bg-stone-900/80 backdrop-blur-xl border border-stone-700/50 rounded-2xl shadow-2xl shadow-black/50 p-8">
+          <h1 className="text-7xl text-center tracking-[0.08em] mb-4 bg-gradient-to-b from-amber-300 via-amber-500 to-amber-700 bg-clip-text text-transparent" style={{ fontFamily: 'Clarendon, serif', textShadow: '0 0 40px rgba(245,158,11,0.3), 0 0 80px rgba(245,158,11,0.15)' }}>
+            WAR
+          </h1>
+          <p className="text-stone-400 text-center mb-2">Juego de estrategia</p>
+          <p className="text-center mb-8">
+            <Link to="/rules" className="text-amber-400/70 hover:text-amber-300 text-xs underline underline-offset-2">
+              Ver reglas del juego
+            </Link>
+          </p>
+
+          <div className="flex gap-2 mb-6 p-1 bg-stone-800/60 rounded-lg">
+            <button
+              onClick={() => setMode("create")}
+              className={`flex-1 py-2 rounded-lg font-medium transition ${mode === "create" ? "bg-amber-600 shadow-lg shadow-amber-600/30" : "hover:bg-stone-700/50"}`}
+            >
             Crear juego
           </button>
           <button
@@ -183,5 +195,6 @@ export default function Home() {
         </div>
       </div>
     </div>
+  </div>
   );
 }
