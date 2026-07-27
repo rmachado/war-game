@@ -392,6 +392,7 @@ export default function GameBoard() {
           turnStatus={turnStatus}
           leftOverlay={leftOverlay}
           rightOverlay={rightOverlay}
+          exchangeCounter={pub.exchangeCounter}
         />
       </div>
 

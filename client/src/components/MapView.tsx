@@ -86,6 +86,7 @@ interface MapViewProps {
   turnStatus: string;
   leftOverlay: ReactNode;
   rightOverlay: ReactNode;
+  exchangeCounter: number;
 }
 
 export default function MapView({
@@ -105,6 +106,7 @@ export default function MapView({
   turnStatus,
   leftOverlay,
   rightOverlay,
+  exchangeCounter,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const territoryNames = useTerritoryNames();
@@ -486,7 +488,7 @@ export default function MapView({
                       };
                       const suffix = labels[k] || "to";
                       return (
-                        <tr key={k}>
+                        <tr key={k} style={Number(k) <= exchangeCounter ? { textDecoration: 'line-through', textDecorationColor: '#ef4444', textDecorationThickness: '2px', opacity: 0.5 } : {}}>
                           <td>
                             {k}
                             {suffix} Canje
