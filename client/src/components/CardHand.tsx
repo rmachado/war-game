@@ -36,31 +36,29 @@ export default function CardHand({
   }
 
   const canExchange =
-    isMyTurn && (phase === "receive" || phase === "place" || phase === "first_round");
+    isMyTurn &&
+    (phase === "receive" || phase === "place" || phase === "first_round");
   const isExchangeValid = selected.length === 3;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-2 lg:p-4"
       onClick={onClose}
     >
       <div
-        className="bg-stone-900 rounded-2xl max-w-5xl w-full max-h-[90vh] p-6 space-y-4 overflow-auto"
+        className="bg-stone-900 rounded-2xl max-w-5xl w-full max-h-full lg:max-h-[95vh] p-4 lg:p-6 space-y-3 lg:space-y-4 overflow-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-xl font-bold">Tus cartas</h3>
-          <button
-            onClick={onClose}
-            className="text-stone-400 hover:text-white text-2xl leading-none"
-          >
-            <X size={24} className="text-stone-400 hover:text-white" />
+          <h3 className="text-lg lg:text-xl font-bold">Tus cartas</h3>
+          <button onClick={onClose}>
+            <X size={22} className="text-stone-400 hover:text-white" />
           </button>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-6">
-          <div className="md:w-48 flex-shrink-0 flex flex-col items-center gap-3">
-            <p className="text-xs text-stone-400 font-semibold uppercase tracking-wide">
+        <div className="flex flex-col md:flex-row gap-4 lg:gap-6">
+          <div className="flex flex-row md:flex-col items-center gap-3 md:gap-3 md:w-48 flex-shrink-0">
+            <p className="text-xs text-stone-400 font-semibold uppercase tracking-wide whitespace-nowrap md:whitespace-normal">
               Objetivo
             </p>
             <ObjectiveCard description={objectiveDescription} />
@@ -82,9 +80,9 @@ export default function CardHand({
               )}
             </div>
 
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-3 md:grid-cols-4 gap-2 lg:gap-3">
               {cards.length === 0 && (
-                <div className="col-span-full text-center text-stone-500 py-8 text-sm">
+                <div className="col-span-full text-center text-stone-500 py-6 lg:py-8 text-xs lg:text-sm">
                   No tienes cartas de territorio aún. Conquista territorios para
                   obtenerlas.
                 </div>
