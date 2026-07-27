@@ -55,6 +55,7 @@ export interface GamePublic {
   playerCount: number;
   log: LogEntry[];
   pendingConquest: { from: string; to: string } | null;
+  winnerObjective: string | null;
 }
 
 export interface LogEntry {

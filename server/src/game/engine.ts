@@ -346,6 +346,7 @@ export function conquerTerritory(
 
     if (checkVictory(state)) {
       state.phase = "game_over";
+      state.winner = state.turnPlayer;
     }
   }
 
@@ -553,6 +554,10 @@ export function getPublicState(state: GameState, playerIdx: number) {
     playerCount: state.players.length,
     log: state.log,
     pendingConquest: state.pendingConquest,
+    winnerObjective:
+      state.winner !== null
+        ? state.players[state.winner]?.objectiveDescription || null
+        : null,
   };
 }
 

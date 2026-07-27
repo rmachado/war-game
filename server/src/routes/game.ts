@@ -446,7 +446,8 @@ router.post("/games/:code/attack", (req: Request, res: Response) => {
     state.winner = playerIdx;
   }
 
-  saveAndBroadcast(code, state, "playing", state.players.length);
+  const status = state.phase === "game_over" ? "finished" : "playing";
+  saveAndBroadcast(code, state, status, state.players.length);
   broadcastAttackResult(code, {
     from, to,
     attack: result.attack,
@@ -502,7 +503,13 @@ router.post("/games/:code/conquer", (req: Request, res: Response) => {
 
   state.pendingConquest = null;
 
-  saveAndBroadcast(code, state, "playing", state.players.length);
+  if (checkVictory(state)) {
+    state.phase = "game_over";
+    state.winner = playerIdx;
+  }
+
+  const status = state.phase === "game_over" ? "finished" : "playing";
+  saveAndBroadcast(code, state, status, state.players.length);
   res.json({ success: true, phase: state.phase });
 });
 
@@ -595,7 +602,8 @@ router.post("/games/:code/end-moves", (req: Request, res: Response) => {
   }
 
   endTurn(state);
-  saveAndBroadcast(code, state, "playing", state.players.length);
+  const status = state.phase === "game_over" ? "finished" : "playing";
+  saveAndBroadcast(code, state, status, state.players.length);
   res.json({ success: true, phase: state.phase });
 });
 
