@@ -239,7 +239,10 @@ export default function MapView({
       onTouchStart={(e) => {
         if (e.touches.length === 1) {
           setDragging(true);
-          setDragStart({ x: e.touches[0].clientX - offset.x, y: e.touches[0].clientY - offset.y });
+          setDragStart({
+            x: e.touches[0].clientX - offset.x,
+            y: e.touches[0].clientY - offset.y,
+          });
         } else if (e.touches.length === 2) {
           const dx = e.touches[0].clientX - e.touches[1].clientX;
           const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -258,11 +261,20 @@ export default function MapView({
           const rect = containerRef.current?.getBoundingClientRect();
           if (rect) zoom(delta > 0 ? 1 : -1, midX - rect.left, midY - rect.top);
         } else if (e.touches.length === 1 && dragging) {
-          setOffset({ x: e.touches[0].clientX - dragStart.x, y: e.touches[0].clientY - dragStart.y });
+          setOffset({
+            x: e.touches[0].clientX - dragStart.x,
+            y: e.touches[0].clientY - dragStart.y,
+          });
         }
       }}
-      onTouchEnd={() => { setDragging(false); lastPinchDist.current = 0; }}
-      onTouchCancel={() => { setDragging(false); lastPinchDist.current = 0; }}
+      onTouchEnd={() => {
+        setDragging(false);
+        lastPinchDist.current = 0;
+      }}
+      onTouchCancel={() => {
+        setDragging(false);
+        lastPinchDist.current = 0;
+      }}
     >
       <div
         className="absolute"
@@ -523,30 +535,25 @@ export default function MapView({
 
       <button
         onClick={onShowCards}
-        className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-end z-10 hover:scale-105 transition-transform"
-        style={{ height: "180px", width: "320px" }}
+        className="absolute bottom-4 left-4 flex items-end gap-1 z-10 hover:scale-105 transition-transform"
       >
-        {Array.from({ length: Math.min(cardCount + 1, 8) }).map((_, i) => {
-          const total = Math.min(cardCount + 1, 8);
-          const angle = total > 1 ? (i / (total - 1)) * 30 - 15 : 0;
-          return (
-            <div
-              key={i}
-              className="cursor-pointer w-32 aspect-[2.5/4.0] rounded-lg shadow-lg border border-stone-600"
-              style={{
-                backgroundImage: "url(/card-back.png)",
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                transform: `rotate(${angle}deg)`,
-                transformOrigin: "bottom center",
-                marginLeft: i > 0 ? "-80px" : "0",
-                position: "absolute",
-                left: `${50 + (i - (total - 1) / 2) * 40}px`,
-                bottom: 0,
-              }}
-            />
-          );
-        })}
+        {Array.from({ length: Math.min(cardCount + 1, 7) }).map((_, i) => (
+          <div
+            key={i}
+            className="rounded-lg border border-stone-600 shadow-lg"
+            style={{
+              backgroundImage: "url(/card-back.png)",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              height: "min(20vh, 160px)",
+              aspectRatio: "2.5 / 4",
+              marginLeft: i > 0 ? "-3vw" : "0",
+              zIndex: i,
+              boxShadow:
+                "0 4px 12px rgba(0,0,0,0.6), 0 1px 3px rgba(0,0,0,0.3)",
+            }}
+          />
+        ))}
       </button>
 
       {showDebug && (
