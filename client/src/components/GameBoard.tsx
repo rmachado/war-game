@@ -21,6 +21,7 @@ import { useTerritoryName, useNeighbors } from "../hooks/useGameData";
 import LeftOverlay from "./LeftOverlay";
 import RightOverlay from "./RightOverlay";
 import ObjectiveCard from "./ObjectiveCard";
+import OrientationGuard from "./OrientationGuard";
 
 export default function GameBoard() {
   const { code } = useParams<{ code: string }>();
@@ -344,180 +345,188 @@ export default function GameBoard() {
     pub.winner !== null ? pub.players[pub.winner]?.color : null;
 
   return (
-    <div className="h-screen">
-      <div className="flex flex-col lg:flex-row h-full">
-        <div className="flex-1 relative min-h-0">
-          <MapView
-            territories={pub.territories}
-            players={pub.players}
-            phase={pub.phase}
-            turnPlayer={pub.turnPlayer}
-            selectedTerritory={selectedTerritory}
-            attackTarget={attackTarget}
-            moveFrom={moveFrom}
-            placementMap={placementMap}
-            onTerritoryClick={handleTerritoryClick}
-            onShowCards={onShowCards}
-            cardCount={secret.cards.length}
-            attackIntent={attackIntent}
-            attackArrow={
-              spectatorIntent?.from && spectatorIntent?.to
-                ? { from: spectatorIntent.from, to: spectatorIntent.to }
-                : isMyTurn && selectedTerritory && attackTarget
-                  ? { from: selectedTerritory, to: attackTarget }
-                  : null
-            }
-            turnStatus={turnStatus}
-            leftOverlay={leftOverlay}
-            rightOverlay={rightOverlay}
-            exchangeCounter={pub.exchangeCounter}
-          />
-        </div>
-
-        <Sidebar
-          pub={pub}
-          secret={secret}
-          isMyTurn={isMyTurn}
-          loading={loading}
-        />
-
-        {showCards && (
-          <CardHand
-            cards={secret.cards}
-            objectiveDescription={secret.objectiveDescription}
-            forcedExchange={secret.forcedExchange}
-            isMyTurn={isMyTurn}
-            phase={pub.phase}
-            onExchange={handleExchange}
-            onClose={() => setShowCards(false)}
-          />
-        )}
-
-        {attackIntent && (
-          <AttackModal
-            from={attackIntent.from}
-            to={attackIntent.to}
-            fromArmies={pub.territories[attackIntent.from]?.armies ?? 0}
-            toArmies={pub.territories[attackIntent.to]?.armies ?? 0}
-            attackerName={secret.name}
-            attackerColor={
-              COLOR_MAP[pub.players[pub.turnPlayer]?.color] || "#dc2626"
-            }
-            defenderName={
-              pub.players[pub.territories[attackIntent.to]?.owner]?.name || "?"
-            }
-            defenderColor={
-              COLOR_MAP[
-                pub.players[pub.territories[attackIntent.to]?.owner]?.color
-              ] || "#eab308"
-            }
-            readonly={false}
-            onAttack={handleAttack}
-            onConquer={handleConquer}
-            onClose={() => {
-              sendAttackIntent(null, null);
-              setAttackIntent(null);
-            }}
-          />
-        )}
-
-        {!attackIntent && pub.pendingConquest && isMyTurn && (
-          <AttackModal
-            from={pub.pendingConquest.from}
-            to={pub.pendingConquest.to}
-            fromArmies={pub.territories[pub.pendingConquest.from]?.armies ?? 0}
-            toArmies={pub.territories[pub.pendingConquest.to]?.armies ?? 0}
-            attackerName={secret.name}
-            attackerColor={
-              COLOR_MAP[pub.players[pub.turnPlayer]?.color] || "#dc2626"
-            }
-            defenderName={
-              pub.players[pub.territories[pub.pendingConquest.to]?.owner]
-                ?.name || "?"
-            }
-            defenderColor={
-              COLOR_MAP[
-                pub.players[pub.territories[pub.pendingConquest.to]?.owner]
-                  ?.color
-              ] || "#eab308"
-            }
-            readonly={false}
-            onConquer={handleConquer}
-            onClose={() => {}}
-          />
-        )}
-
-        {!attackIntent &&
-          spectatorIntent &&
-          spectatorIntent.color !== token?.split(":")[1] && (
-            <AttackModal
-              from={spectatorIntent.from}
-              to={spectatorIntent.to}
-              fromArmies={pub.territories[spectatorIntent.from]?.armies ?? 0}
-              toArmies={pub.territories[spectatorIntent.to]?.armies ?? 0}
-              attackerName={
-                pub.players.find((p) => p.color === spectatorIntent.color)
-                  ?.name || "?"
+    <OrientationGuard>
+      <div className="h-screen">
+        <div className="flex flex-col lg:flex-row h-full">
+          <div className="flex-1 relative min-h-0">
+            <MapView
+              territories={pub.territories}
+              players={pub.players}
+              phase={pub.phase}
+              turnPlayer={pub.turnPlayer}
+              selectedTerritory={selectedTerritory}
+              attackTarget={attackTarget}
+              moveFrom={moveFrom}
+              placementMap={placementMap}
+              onTerritoryClick={handleTerritoryClick}
+              onShowCards={onShowCards}
+              cardCount={secret.cards.length}
+              attackIntent={attackIntent}
+              attackArrow={
+                spectatorIntent?.from && spectatorIntent?.to
+                  ? { from: spectatorIntent.from, to: spectatorIntent.to }
+                  : isMyTurn && selectedTerritory && attackTarget
+                    ? { from: selectedTerritory, to: attackTarget }
+                    : null
               }
+              turnStatus={turnStatus}
+              leftOverlay={leftOverlay}
+              rightOverlay={rightOverlay}
+              exchangeCounter={pub.exchangeCounter}
+            />
+          </div>
+
+          <Sidebar
+            pub={pub}
+            secret={secret}
+            isMyTurn={isMyTurn}
+            loading={loading}
+          />
+
+          {showCards && (
+            <CardHand
+              cards={secret.cards}
+              objectiveDescription={secret.objectiveDescription}
+              forcedExchange={secret.forcedExchange}
+              isMyTurn={isMyTurn}
+              phase={pub.phase}
+              onExchange={handleExchange}
+              onClose={() => setShowCards(false)}
+            />
+          )}
+
+          {attackIntent && (
+            <AttackModal
+              from={attackIntent.from}
+              to={attackIntent.to}
+              fromArmies={pub.territories[attackIntent.from]?.armies ?? 0}
+              toArmies={pub.territories[attackIntent.to]?.armies ?? 0}
+              attackerName={secret.name}
               attackerColor={
-                COLOR_MAP[spectatorIntent.color as keyof typeof COLOR_MAP] ||
-                "#dc2626"
+                COLOR_MAP[pub.players[pub.turnPlayer]?.color] || "#dc2626"
               }
               defenderName={
-                pub.players[pub.territories[spectatorIntent.to]?.owner]?.name ||
+                pub.players[pub.territories[attackIntent.to]?.owner]?.name ||
                 "?"
               }
               defenderColor={
                 COLOR_MAP[
-                  pub.players[pub.territories[spectatorIntent.to]?.owner]?.color
+                  pub.players[pub.territories[attackIntent.to]?.owner]?.color
                 ] || "#eab308"
               }
-              readonly={true}
-              spectatorResult={spectatorResult}
+              readonly={false}
+              onAttack={handleAttack}
+              onConquer={handleConquer}
+              onClose={() => {
+                sendAttackIntent(null, null);
+                setAttackIntent(null);
+              }}
+            />
+          )}
+
+          {!attackIntent && pub.pendingConquest && isMyTurn && (
+            <AttackModal
+              from={pub.pendingConquest.from}
+              to={pub.pendingConquest.to}
+              fromArmies={
+                pub.territories[pub.pendingConquest.from]?.armies ?? 0
+              }
+              toArmies={pub.territories[pub.pendingConquest.to]?.armies ?? 0}
+              attackerName={secret.name}
+              attackerColor={
+                COLOR_MAP[pub.players[pub.turnPlayer]?.color] || "#dc2626"
+              }
+              defenderName={
+                pub.players[pub.territories[pub.pendingConquest.to]?.owner]
+                  ?.name || "?"
+              }
+              defenderColor={
+                COLOR_MAP[
+                  pub.players[pub.territories[pub.pendingConquest.to]?.owner]
+                    ?.color
+                ] || "#eab308"
+              }
+              readonly={false}
+              onConquer={handleConquer}
               onClose={() => {}}
             />
           )}
 
-        {moveModal && (
-          <MoveModal
-            from={moveModal.from}
-            to={moveModal.to}
-            maxArmies={(pub.territories[moveModal.from]?.armies ?? 1) - 1}
-            onMove={(count) => handleMove(moveModal.from, moveModal.to, count)}
-            onClose={() => setMoveModal(null)}
-          />
-        )}
-      </div>
+          {!attackIntent &&
+            spectatorIntent &&
+            spectatorIntent.color !== token?.split(":")[1] && (
+              <AttackModal
+                from={spectatorIntent.from}
+                to={spectatorIntent.to}
+                fromArmies={pub.territories[spectatorIntent.from]?.armies ?? 0}
+                toArmies={pub.territories[spectatorIntent.to]?.armies ?? 0}
+                attackerName={
+                  pub.players.find((p) => p.color === spectatorIntent.color)
+                    ?.name || "?"
+                }
+                attackerColor={
+                  COLOR_MAP[spectatorIntent.color as keyof typeof COLOR_MAP] ||
+                  "#dc2626"
+                }
+                defenderName={
+                  pub.players[pub.territories[spectatorIntent.to]?.owner]
+                    ?.name || "?"
+                }
+                defenderColor={
+                  COLOR_MAP[
+                    pub.players[pub.territories[spectatorIntent.to]?.owner]
+                      ?.color
+                  ] || "#eab308"
+                }
+                readonly={true}
+                spectatorResult={spectatorResult}
+                onClose={() => {}}
+              />
+            )}
 
-      {pub.phase === "game_over" && winnerName ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-stone-900/60 rounded-2xl border border-amber-500/30 p-10 flex flex-col items-center gap-6 shadow-2xl max-w-md">
-            <h1 className="text-4xl font-bold text-center">
-              ¡
-              <span
-                style={{
-                  color:
-                    COLOR_MAP[winnerColor as keyof typeof COLOR_MAP] ||
-                    "#fbbf24",
-                }}
-              >
-                {winnerName}
-              </span>{" "}
-              ha ganado!
-            </h1>
-            <ObjectiveCard
-              description={pub.winnerObjective || ""}
-              className="w-48"
+          {moveModal && (
+            <MoveModal
+              from={moveModal.from}
+              to={moveModal.to}
+              maxArmies={(pub.territories[moveModal.from]?.armies ?? 1) - 1}
+              onMove={(count) =>
+                handleMove(moveModal.from, moveModal.to, count)
+              }
+              onClose={() => setMoveModal(null)}
             />
-            <button
-              onClick={() => (window.location.href = "/")}
-              className="mt-2 px-8 py-3 bg-amber-600 hover:bg-amber-500 rounded-xl font-bold text-lg transition"
-            >
-              Volver al inicio
-            </button>
-          </div>
+          )}
         </div>
-      ) : null}
-    </div>
+
+        {pub.phase === "game_over" && winnerName ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="bg-stone-900/60 rounded-2xl border border-amber-500/30 p-10 flex flex-col items-center gap-6 shadow-2xl max-w-md">
+              <h1 className="text-4xl font-bold text-center">
+                ¡
+                <span
+                  style={{
+                    color:
+                      COLOR_MAP[winnerColor as keyof typeof COLOR_MAP] ||
+                      "#fbbf24",
+                  }}
+                >
+                  {winnerName}
+                </span>{" "}
+                ha ganado!
+              </h1>
+              <ObjectiveCard
+                description={pub.winnerObjective || ""}
+                className="w-48"
+              />
+              <button
+                onClick={() => (window.location.href = "/")}
+                className="mt-2 px-8 py-3 bg-amber-600 hover:bg-amber-500 rounded-xl font-bold text-lg transition"
+              >
+                Volver al inicio
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </OrientationGuard>
   );
 }
