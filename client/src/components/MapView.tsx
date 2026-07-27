@@ -77,6 +77,7 @@ interface MapViewProps {
   cardCount: number;
   attackIntent: { from: string; to: string } | null;
   attackArrow: { from: string; to: string } | null;
+  turnStatus: string;
 }
 
 export default function MapView({
@@ -93,6 +94,7 @@ export default function MapView({
   cardCount,
   attackIntent,
   attackArrow,
+  turnStatus,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const territoryNames = useTerritoryNames();
@@ -531,6 +533,10 @@ export default function MapView({
         >
           <ZoomIn size={18} />
         </button>
+      </div>
+
+      <div className="absolute top-4 left-4 z-10 bg-black/85 backdrop-blur-md border border-amber-500/30 rounded-xl px-4 py-3 text-sm lg:text-base lg:px-6 lg:py-4 leading-relaxed pointer-events-none select-none shadow-lg shadow-black/40">
+        <p className="text-amber-300 font-semibold drop-shadow-sm">{turnStatus}</p>
       </div>
 
       <button

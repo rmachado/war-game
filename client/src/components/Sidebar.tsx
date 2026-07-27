@@ -100,8 +100,14 @@ export default function Sidebar({
         {mobileOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
       <div
-        className={`${mobileOpen ? "fixed inset-0 z-40 bg-black/80 p-4 pt-16 overflow-auto" : "hidden"} lg:relative lg:flex lg:w-80 lg:min-w-[320px] flex-col bg-stone-800 border-l border-stone-700 p-4 gap-2 overflow-auto`}
+        className={`${mobileOpen ? "fixed top-0 right-0 z-50 w-1/2 h-full p-4 overflow-auto" : "hidden"} lg:relative lg:flex lg:w-80 lg:min-w-[320px] flex-col bg-stone-800 border-l border-stone-700 p-4 gap-2 overflow-auto`}
       >
         <h2 className="text-lg font-bold truncate">
           Ronda {pub.round}
