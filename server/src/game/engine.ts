@@ -199,23 +199,23 @@ export function exchangeCards(
   state.exchangeCounter = counter;
   const armies = getExchangeArmies(counter);
 
-  let bonusArmies = 0;
+  let bonusLog = "";
   for (const card of cardsToExchange) {
     if (
       !isJokerCard(card) &&
       state.territories[card.id]?.owner === state.turnPlayer
     ) {
-      bonusArmies += 2;
+      state.territories[card.id].armies += 2;
+      bonusLog += ` +2 en ${TERRITORY_NAMES[card.id]}`;
     }
   }
 
   state.forcedExchange = player.cards.length >= 5;
-  const totalArmies = armies + bonusArmies;
   logEvent(
     state,
-    `${player.name} canjeó 3 cartas y recibió ${totalArmies} ejércitos`,
+    `${player.name} canjeó 3 cartas y recibió ${armies} ejércitos${bonusLog}`,
   );
-  return totalArmies;
+  return armies;
 }
 
 export function checkForcedExchange(state: GameState): boolean {
