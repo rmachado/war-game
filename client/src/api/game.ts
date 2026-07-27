@@ -17,10 +17,10 @@ export function getAuthHeaders(token: string) {
   return { Authorization: `Bearer ${token}` };
 }
 
-export function createGame(name: string, color: string, playerCount: number) {
+export function createGame(name: string, color: string) {
   return request('/games', {
     method: 'POST',
-    body: JSON.stringify({ name, color, playerCount }),
+    body: JSON.stringify({ name, color }),
   });
 }
 
@@ -88,6 +88,13 @@ export function endAttacks(code: string, token: string) {
   return request(`/games/${code}/end-attacks`, {
     method: 'POST',
     body: JSON.stringify({ token }),
+  });
+}
+
+export function kickPlayer(code: string, token: string, targetColor: string) {
+  return request(`/games/${code}/kick`, {
+    method: 'POST',
+    body: JSON.stringify({ token, targetColor }),
   });
 }
 

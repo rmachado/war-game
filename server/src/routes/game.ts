@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from "express";
-import { generateCode, getDb, loadGame, saveGame } from "../db.js";
+import { generateCode, loadGame, saveGame } from "../db.js";
 import {
   calculateReinforcements,
   checkForcedExchange,
@@ -22,6 +22,8 @@ import { broadcastGameState, broadcastAttackResult } from "../ws.js";
 import { getGameData } from "../game/game-data.js";
 
 const router = Router();
+const MAX_PLAYERS = 6;
+const MIN_PLAYERS = 3;
 
 router.get("/game-data", (_req: Request, res: Response) => {
   res.json(getGameData());
@@ -36,26 +38,15 @@ function getTimeString(): string {
   return `${day}/${month} ${hours}:${mins}`;
 }
 
-function saveAndBroadcast(code: string, state: any, status: string, playerCount: number) {
-  saveGame(code, state, status, playerCount);
+function saveAndBroadcast(code: string, state: any, status: string) {
+  saveGame(code, state, status, MAX_PLAYERS);
   broadcastGameState(code, state);
 }
 
-function getGamePlayerCount(code: string): number {
-  const row = getDb()
-    .prepare("SELECT player_count FROM games WHERE code = ?")
-    .get(code) as { player_count: number } | undefined;
-  return row?.player_count ?? 6;
-}
-
 router.post("/games", (req: Request, res: Response) => {
-  const { name, color, playerCount } = req.body;
-  if (!name || !color || !playerCount) {
-    res.status(400).json({ error: "Nombre, color y cantidad de jugadores requeridos" });
-    return;
-  }
-  if (playerCount < 3 || playerCount > 6) {
-    res.status(400).json({ error: "Jugadores debe ser entre 3 y 6" });
+  const { name, color } = req.body;
+  if (!name || !color) {
+    res.status(400).json({ error: "Nombre y color requeridos" });
     return;
   }
   if (!ALL_COLORS.includes(color)) {
@@ -69,7 +60,7 @@ router.post("/games", (req: Request, res: Response) => {
   }
 
   const initialState = createGame([{ name, color }]);
-  saveAndBroadcast(code, initialState, "waiting", playerCount);
+  saveAndBroadcast(code, initialState, "waiting");
 
   const token = `${code}:${color}`;
   res.json({ code, token, playerIndex: 0 });
@@ -99,8 +90,7 @@ router.post("/games/:code/join", (req: Request, res: Response) => {
     return;
   }
 
-  const maxPlayers = getGamePlayerCount(code);
-  if (state.players.length >= maxPlayers) {
+  if (state.players.length >= MAX_PLAYERS) {
     res.status(400).json({ error: "Juego lleno" });
     return;
   }
@@ -113,7 +103,7 @@ router.post("/games/:code/join", (req: Request, res: Response) => {
     cards: [],
     alive: true,
   });
-  saveAndBroadcast(code, state, "waiting", maxPlayers);
+  saveAndBroadcast(code, state, "waiting");
 
   const token = `${code}:${color}`;
   res.json({ code, token, playerIndex: state.players.length - 1 });
@@ -184,10 +174,7 @@ router.post("/games/:code/change-color", (req: Request, res: Response) => {
   }
 
   player.color = color as any;
-  const gameRow = getDb()
-    .prepare("SELECT player_count FROM games WHERE code = ?")
-    .get(code) as { player_count: number };
-  saveAndBroadcast(code, state, "waiting", gameRow?.player_count ?? 6);
+  saveAndBroadcast(code, state, "waiting");
   res.json({ success: true, newToken: `${code}:${color}` });
 });
 
@@ -212,12 +199,11 @@ router.post("/games/:code/start", (req: Request, res: Response) => {
     return;
   }
 
-  const maxPlayers = getGamePlayerCount(code);
-  if (state.players.length !== maxPlayers) {
+  if (state.players.length < MIN_PLAYERS) {
     res
       .status(400)
       .json({
-        error: `Se necesitan ${maxPlayers} jugadores, hay ${state.players.length}`,
+        error: `Se necesitan al menos ${MIN_PLAYERS} jugadores para iniciar, hay ${state.players.length}`,
       });
     return;
   }
@@ -226,7 +212,49 @@ router.post("/games/:code/start", (req: Request, res: Response) => {
     state.players.map((p) => ({ name: p.name, color: p.color })),
   );
   startFirstRound(fullGame);
-  saveAndBroadcast(code, fullGame, "playing", maxPlayers);
+  saveAndBroadcast(code, fullGame, "playing");
+  res.json({ success: true });
+});
+
+router.post("/games/:code/kick", (req: Request, res: Response) => {
+  const { code } = req.params;
+  const { token, targetColor } = req.body;
+
+  const state = loadGame(code);
+  if (!state) {
+    res.status(404).json({ error: "Juego no encontrado" });
+    return;
+  }
+
+  if (state.phase !== "lobby") {
+    res.status(400).json({ error: "Solo se puede expulsar jugadores en la sala de espera" });
+    return;
+  }
+
+  if (!token || !targetColor) {
+    res.status(400).json({ error: "Token y color requeridos" });
+    return;
+  }
+
+  const color = token.split(":")[1];
+  if (state.players[0]?.color !== color) {
+    res.status(403).json({ error: "Solo el anfitrión puede expulsar jugadores" });
+    return;
+  }
+
+  if (color === targetColor) {
+    res.status(400).json({ error: "No puedes expulsarte a ti mismo" });
+    return;
+  }
+
+  const targetIdx = state.players.findIndex((p) => p.color === targetColor);
+  if (targetIdx === -1) {
+    res.status(400).json({ error: "Jugador no encontrado" });
+    return;
+  }
+
+  state.players.splice(targetIdx, 1);
+  saveAndBroadcast(code, state, "waiting");
   res.json({ success: true });
 });
 
@@ -287,7 +315,7 @@ router.post("/games/:code/exchange", (req: Request, res: Response) => {
   }
 
   state.pendingArmies += result;
-  saveAndBroadcast(code, state, "playing", state.players.length);
+  saveAndBroadcast(code, state, "playing");
   res.json({ armiesReceived: result, pendingArmies: state.pendingArmies });
 });
 
@@ -375,7 +403,7 @@ router.post("/games/:code/place-armies", (req: Request, res: Response) => {
     state.phase = "attack";
   }
 
-  saveAndBroadcast(code, state, "playing", state.players.length);
+  saveAndBroadcast(code, state, "playing");
   res.json({ success: true, phase: state.phase });
 });
 
@@ -447,7 +475,7 @@ router.post("/games/:code/attack", (req: Request, res: Response) => {
   }
 
   const status = state.phase === "game_over" ? "finished" : "playing";
-  saveAndBroadcast(code, state, status, state.players.length);
+  saveAndBroadcast(code, state, status);
   broadcastAttackResult(code, {
     from, to,
     attack: result.attack,
@@ -509,7 +537,7 @@ router.post("/games/:code/conquer", (req: Request, res: Response) => {
   }
 
   const status = state.phase === "game_over" ? "finished" : "playing";
-  saveAndBroadcast(code, state, status, state.players.length);
+  saveAndBroadcast(code, state, status);
   res.json({ success: true, phase: state.phase });
 });
 
@@ -542,7 +570,7 @@ router.post("/games/:code/move", (req: Request, res: Response) => {
     return;
   }
 
-  saveAndBroadcast(code, state, "playing", state.players.length);
+  saveAndBroadcast(code, state, "playing");
   res.json({ success: true });
 });
 
@@ -570,7 +598,7 @@ router.post("/games/:code/end-attacks", (req: Request, res: Response) => {
   }
 
   state.phase = "move";
-  saveAndBroadcast(code, state, "playing", state.players.length);
+  saveAndBroadcast(code, state, "playing");
   res.json({ success: true });
 });
 
@@ -603,7 +631,7 @@ router.post("/games/:code/end-moves", (req: Request, res: Response) => {
 
   endTurn(state);
   const status = state.phase === "game_over" ? "finished" : "playing";
-  saveAndBroadcast(code, state, status, state.players.length);
+  saveAndBroadcast(code, state, status);
   res.json({ success: true, phase: state.phase });
 });
 

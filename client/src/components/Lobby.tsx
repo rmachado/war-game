@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useGame, useGameStore } from '../store/game'
-import { startGame } from '../api/game'
+import { startGame, kickPlayer } from '../api/game'
 import { COLOR_MAP, COLOR_NAMES, ALL_COLORS, type Color } from '../types'
 import GameBoard from './GameBoard'
-import { Copy, Play } from 'lucide-react'
+import { Copy, Play, X, ArrowLeft } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 export default function Lobby() {
   const { code } = useParams<{ code: string }>()
@@ -12,7 +13,25 @@ export default function Lobby() {
   const { data, isLoading, error, refetch } = useGame(code!, token)
 
   if (isLoading) return <div className="flex items-center justify-center min-h-screen text-stone-400">Cargando...</div>
-  if (error || !data) return <div className="flex items-center justify-center min-h-screen text-red-400">Error al cargar el juego</div>
+  if (error || !data) {
+    return (
+      <div className="flex items-center justify-center min-h-screen p-4">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-900/50 flex items-center justify-center">
+            <X size={32} className="text-red-400" />
+          </div>
+          <h2 className="text-xl font-bold text-white mb-2">No se pudo unir a la sala de juego</h2>
+          <p className="text-stone-400 mb-6">El juego no existe o el enlace es inválido</p>
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-stone-800 hover:bg-stone-700 rounded-lg text-sm font-medium transition"
+          >
+            <ArrowLeft size={16} /> Volver al inicio
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   if (data.public.phase !== 'lobby') {
     return <GameBoard />
@@ -21,7 +40,7 @@ export default function Lobby() {
   const isCreator = data.public.players[0]?.color === token?.split(':')[1]
   const myColor = token?.split(':')[1] || ''
   const activeCode = code || storedCode || ''
-  const totalSlots = data.public.playerCount
+  const totalSlots = 6
   const filledSlots = data.public.players.length
   const emptySlots = Math.max(0, totalSlots - filledSlots)
 
@@ -49,6 +68,15 @@ export default function Lobby() {
       const d = await res.json()
       const newToken = `${activeCode}:${newColor}`
       useGameStore.getState().setSession(activeCode, newToken)
+      refetch()
+    } catch (e: any) {
+      alert(e.message)
+    }
+  }
+
+  async function handleKick(targetColor: string) {
+    try {
+      await kickPlayer(activeCode, token!, targetColor)
       refetch()
     } catch (e: any) {
       alert(e.message)
@@ -108,6 +136,15 @@ export default function Lobby() {
                   <span className="text-xs text-stone-400">{COLOR_NAMES[p.color]}</span>
                 )}
                 {i === 0 && <span className="text-xs bg-amber-600 px-2 py-0.5 rounded">Anfitrión</span>}
+                {isCreator && i !== 0 && (
+                  <button
+                    onClick={() => handleKick(p.color)}
+                    className="text-red-400 hover:text-red-300 transition"
+                    title="Expulsar jugador"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
               </div>
             )
           })}
@@ -126,7 +163,7 @@ export default function Lobby() {
         {isCreator && (
           <button
             onClick={handleStart}
-            disabled={!allColorsUnique}
+            disabled={!allColorsUnique || filledSlots < 3}
             className="w-full py-3 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 rounded-lg font-bold text-lg transition flex items-center justify-center gap-2"
           >
             <Play size={20} /> Iniciar juego

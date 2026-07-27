@@ -14,7 +14,6 @@ export default function Home() {
   );
   const [color, setColor] = useState("red");
   const [joinCode, setJoinCode] = useState("");
-  const [playerCount, setPlayerCount] = useState(3);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -34,7 +33,7 @@ export default function Home() {
     setLoading(true);
     setError("");
     try {
-      const data = await createGame(name.trim(), color, playerCount);
+      const data = await createGame(name.trim(), color);
       localStorage.setItem("war_name", name.trim());
       setSession(data.code, data.token);
       navigate(`/game/${data.code}`);
@@ -143,25 +142,6 @@ export default function Home() {
               ))}
             </div>
           </div>
-
-          {mode === "create" && (
-            <div>
-              <label className="block text-sm text-stone-400 mb-1">
-                Jugadores
-              </label>
-              <div className="flex gap-2">
-                {[3, 4, 5, 6].map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => setPlayerCount(n)}
-                    className={`w-12 h-12 rounded-lg font-medium transition ${playerCount === n ? "bg-amber-600" : "bg-stone-700 hover:bg-stone-600"}`}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
 
           {mode === "join" && (
             <div>
