@@ -23,6 +23,8 @@ import {
   type TerritoryState,
 } from "../types";
 import { useTerritoryName, useNeighbors } from "../hooks/useGameData";
+import LeftOverlay from "./LeftOverlay";
+import RightOverlay from "./RightOverlay";
 
 export default function GameBoard() {
   const { code } = useParams<{ code: string }>();
@@ -52,6 +54,8 @@ export default function GameBoard() {
     to: string;
   } | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const onShowCards = () => setShowCards(true);
 
   const handleAttackIntent = useCallback(
     (from: string | null, to: string | null, color?: string) => {
@@ -89,6 +93,8 @@ export default function GameBoard() {
 
   const { public: pub, secret } = data;
   const isMyTurn = secret.color === pub.players[pub.turnPlayer]?.color;
+  const isFirstRound = pub.round === 1;
+  const [showObjective, setShowObjective] = useState(false);
 
   let turnStatus = "";
   if (pub.phase === "game_over") {
@@ -105,10 +111,47 @@ export default function GameBoard() {
   ) {
     turnStatus = "Colocar ejércitos";
   } else if (pub.phase === "attack") {
-    turnStatus = "Atacar territorios enemigos";
+    turnStatus = "Atacar territorios";
   } else if (pub.phase === "move") {
-    turnStatus = "Mover ejércitos entre territorios";
+    turnStatus = "Mover ejércitos";
   }
+
+  const totalPlaced = Object.values(placementMap).reduce((a, b) => a + b, 0);
+
+  const leftOverlay = (
+    <LeftOverlay
+      turnStatus={turnStatus}
+      isMyTurn={isMyTurn}
+      pub={pub}
+      secret={secret}
+      totalPlaced={totalPlaced}
+      placementMap={placementMap}
+      selectedTerritory={selectedTerritory}
+      attackTarget={attackTarget}
+      error={error}
+      tn={tn}
+      onShowCards={onShowCards}
+      addArmy={addArmy}
+      removeArmy={removeArmy}
+    />
+  );
+
+  const rightOverlay = (
+    <RightOverlay
+      isMyTurn={isMyTurn}
+      pub={pub}
+      secret={secret}
+      loading={loading}
+      totalPlaced={totalPlaced}
+      isFirstRound={isFirstRound}
+      selectedTerritory={selectedTerritory}
+      attackTarget={attackTarget}
+      handlePlaceArmies={handlePlaceArmies}
+      handleOpenAttack={handleOpenAttack}
+      handleEndAttacks={handleEndAttacks}
+      handleEndMoves={handleEndMoves}
+    />
+  );
 
   async function handleExchange(cardIds: string[]) {
     setLoading(true);
@@ -269,6 +312,13 @@ export default function GameBoard() {
     setLoading(false);
   }
 
+  async function handleOpenAttack() {
+    if (selectedTerritory && attackTarget) {
+      sendAttackIntent(selectedTerritory, attackTarget);
+      setAttackIntent({ from: selectedTerritory, to: attackTarget });
+    }
+  }
+
   async function handleEndAttacks() {
     setLoading(true);
     try {
@@ -329,7 +379,7 @@ export default function GameBoard() {
           moveFrom={moveFrom}
           placementMap={placementMap}
           onTerritoryClick={handleTerritoryClick}
-          onShowCards={() => setShowCards(true)}
+          onShowCards={onShowCards}
           cardCount={secret.cards.length}
           attackIntent={attackIntent}
           attackArrow={
@@ -340,6 +390,8 @@ export default function GameBoard() {
                 : null
           }
           turnStatus={turnStatus}
+          leftOverlay={leftOverlay}
+          rightOverlay={rightOverlay}
         />
       </div>
 
@@ -347,24 +399,7 @@ export default function GameBoard() {
         pub={pub}
         secret={secret}
         isMyTurn={isMyTurn}
-        selectedTerritory={selectedTerritory}
-        placementMap={placementMap}
-        error={error}
         loading={loading}
-        onAddArmy={addArmy}
-        onRemoveArmy={removeArmy}
-        onPlaceArmies={handlePlaceArmies}
-        onExchange={handleExchange}
-        onOpenAttack={() => {
-          if (selectedTerritory && attackTarget) {
-            sendAttackIntent(selectedTerritory, attackTarget);
-            setAttackIntent({ from: selectedTerritory, to: attackTarget });
-          }
-        }}
-        onEndAttacks={handleEndAttacks}
-        onEndMoves={handleEndMoves}
-        onShowCards={() => setShowCards(true)}
-        attackTarget={attackTarget}
       />
 
       {showCards && (

@@ -1,4 +1,10 @@
-import { useRef, useEffect, useState, useCallback } from "react";
+import {
+  useRef,
+  useEffect,
+  useState,
+  useCallback,
+  type ReactNode,
+} from "react";
 import {
   COLOR_MAP,
   type PlayerPublic,
@@ -78,6 +84,8 @@ interface MapViewProps {
   attackIntent: { from: string; to: string } | null;
   attackArrow: { from: string; to: string } | null;
   turnStatus: string;
+  leftOverlay: ReactNode;
+  rightOverlay: ReactNode;
 }
 
 export default function MapView({
@@ -95,6 +103,8 @@ export default function MapView({
   attackIntent,
   attackArrow,
   turnStatus,
+  leftOverlay,
+  rightOverlay,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const territoryNames = useTerritoryNames();
@@ -144,7 +154,7 @@ export default function MapView({
     if (!el) return;
     function onWheel(e: WheelEvent) {
       e.preventDefault();
-      const rect = el.getBoundingClientRect();
+      const rect = el!.getBoundingClientRect();
       zoom(e.deltaY > 0 ? -1 : 1, e.clientX - rect.left, e.clientY - rect.top);
     }
     el.addEventListener("wheel", onWheel, { passive: false });
@@ -535,9 +545,15 @@ export default function MapView({
         </button>
       </div>
 
-      <div className="absolute top-4 left-4 z-10 bg-black/85 backdrop-blur-md border border-amber-500/30 rounded-xl px-4 py-3 text-sm lg:text-base lg:px-6 lg:py-4 leading-relaxed pointer-events-none select-none shadow-lg shadow-black/40">
-        <p className="text-amber-300 font-semibold drop-shadow-sm">{turnStatus}</p>
+      <div className="absolute top-4 left-4 z-10 max-w-[20vw] max-h-[80vh] overflow-y-auto bg-black/80 backdrop-blur-lg  rounded-md px-4 py-3 text-xs lg:text-sm leading-relaxed pointer-events-auto select-none shadow-lg shadow-black/40 space-y-2">
+        {leftOverlay}
       </div>
+
+      {rightOverlay && (
+        <div className="absolute top-4 right-4 z-10 max-w-[45vw]">
+          {rightOverlay}
+        </div>
+      )}
 
       <button
         onClick={onShowCards}

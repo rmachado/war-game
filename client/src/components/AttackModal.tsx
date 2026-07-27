@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { getDiceSvg } from "./Dice";
 import Token from "./Token";
 import { useTerritoryName } from "../hooks/useGameData";
-import { X, Swords } from "lucide-react";
+import { X, Swords, ArrowRight } from "lucide-react";
 
 interface DiceResult {
   attack: number[];
@@ -89,21 +89,24 @@ export default function AttackModal({
 
   const effectiveResult = readonly ? spectatorResult : result;
 
-  const isConquered = effectiveResult?.conquered || (toArmies === 0 && !readonly);
-  const conquerMax = isConquered ? Math.min(attackingArmies, fromArmies - 1) : 0;
+  const isConquered =
+    effectiveResult?.conquered || (toArmies === 0 && !readonly);
+  const conquerMax = isConquered
+    ? Math.min(attackingArmies, fromArmies - 1)
+    : 0;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 lg:p-4 overflow-y-auto"
       onClick={isConquered ? undefined : onClose}
     >
       <div
-        className="bg-stone-800 rounded-2xl max-w-lg w-full p-6 space-y-4"
+        className="bg-stone-800 rounded-2xl lg:max-w-lg w-full p-4 lg:p-6 space-y-2 lg:space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold">
-            Batalla: {tn(from)} → {tn(to)}
+          <h3 className="text-lg font-bold flex gap-2 items-center">
+            Batalla: {tn(from)} <ArrowRight className="w-4" /> {tn(to)}
           </h3>
           <button
             onClick={onClose}
@@ -129,7 +132,7 @@ export default function AttackModal({
         </div>
 
         {!isConquered && !readonly && (
-          <div className="space-y-2">
+          <div className="lg:space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-stone-400">Ejércitos atacantes</span>
               <span className="text-white font-bold text-lg">
@@ -152,156 +155,178 @@ export default function AttackModal({
           </div>
         )}
 
-        <div className="flex items-start justify-center gap-4 py-2">
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-xs text-stone-400">
-              Atacantes ({attackingArmies})
-            </span>
-            <div className="flex gap-0.5 flex-wrap justify-center">
-              {Array.from({ length: attackingArmies }).map((_, i) => {
-                const lost = effectiveResult
-                  ? i >= attackingArmies - effectiveResult.attackLosses
-                  : false;
-                return (
-                  <Token key={`atk-${i}`} alive={!lost} color={attackerColor} />
-                );
-              })}
+        <div className="flex flex-row lg:flex-col gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-center gap-8 py-2">
+              <div className="flex flex-col items-end gap-4">
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-xs text-stone-400">
+                    Atacantes ({attackingArmies})
+                  </span>
+                  <div className="flex gap-0.5 flex-wrap justify-center min-h-8">
+                    {Array.from({ length: attackingArmies }).map((_, i) => {
+                      const lost = effectiveResult
+                        ? i >= attackingArmies - effectiveResult.attackLosses
+                        : false;
+                      return (
+                        <Token
+                          key={`atk-${i}`}
+                          alive={!lost}
+                          color={attackerColor}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-xs text-stone-400">Ataque</span>
+                  <div className="flex gap-1">
+                    {(rolling
+                      ? rollingFrames[0]
+                      : effectiveResult?.attack ||
+                        [1, 1, 1].slice(0, attackingArmies)
+                    ).map((v: number, i: number) => (
+                      <span
+                        key={i}
+                        dangerouslySetInnerHTML={{
+                          __html: getDiceSvg(v, "red"),
+                        }}
+                        className={rolling ? "animate-pulse" : ""}
+                      />
+                    ))}
+                  </div>
+                  {effectiveResult && !rolling && (
+                    <span className="text-xs text-red-400">
+                      -{effectiveResult.attackLosses}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-4">
+                <Swords size={24} className="text-stone-500" />
+              </div>
+
+              <div className="flex flex-col items-start gap-4">
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-xs text-stone-400">
+                    Defensores ({Math.min(3, toArmies)})
+                  </span>
+                  <div className="flex gap-0.5 flex-wrap justify-center min-h-8">
+                    {Array.from({ length: Math.min(3, toArmies) }).map(
+                      (_, i) => {
+                        const defDice = Math.min(3, toArmies);
+                        const lost = effectiveResult
+                          ? i >= defDice - effectiveResult.defenseLosses
+                          : false;
+                        return (
+                          <Token
+                            key={`def-${i}`}
+                            alive={!lost}
+                            color={defenderColor}
+                          />
+                        );
+                      },
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-xs text-stone-400">Defensa</span>
+                  <div className="flex gap-1">
+                    {(rolling
+                      ? rollingFrames[1]
+                      : effectiveResult?.defense ||
+                        [1, 1, 1].slice(0, Math.min(3, toArmies))
+                    ).map((v: number, i: number) => (
+                      <span
+                        key={i}
+                        dangerouslySetInnerHTML={{
+                          __html: getDiceSvg(v, "yellow"),
+                        }}
+                        className={rolling ? "animate-pulse" : ""}
+                      />
+                    ))}
+                  </div>
+                  {effectiveResult && !rolling && (
+                    <span className="text-xs text-yellow-400">
+                      -{effectiveResult.defenseLosses}
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
-          <Swords size={28} className="text-stone-500 pt-4" />
-
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-xs text-stone-400">
-              Defensores ({Math.min(3, toArmies)})
-            </span>
-            <div className="flex gap-0.5 flex-wrap justify-center">
-              {Array.from({ length: Math.min(3, toArmies) }).map((_, i) => {
-                const defDice = Math.min(3, toArmies);
-                const lost = effectiveResult
-                  ? i >= defDice - effectiveResult.defenseLosses
-                  : false;
-                return (
-                  <Token key={`def-${i}`} alive={!lost} color={defenderColor} />
-                );
-              })}
+          {isConquered && (
+            <div className="flex-1 min-w-0">
+              <div className="bg-green-900/30 border border-green-600 rounded-lg p-4 text-center space-y-1 lg:space-y-3">
+                <p className="text-green-400 font-bold text-lg">
+                  ¡Territorio conquistado!
+                </p>
+                {!readonly ? (
+                  <>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-stone-400">
+                          Ejércitos a mover
+                        </span>
+                        <span className="text-white font-bold text-lg">
+                          {conquerArmies}
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={1}
+                        max={conquerMax}
+                        value={conquerArmies}
+                        onChange={(e) =>
+                          setConquerArmies(Number(e.target.value))
+                        }
+                        className="w-full h-2 bg-stone-700 rounded-lg appearance-none cursor-pointer accent-green-500"
+                      />
+                      <div className="flex justify-between text-xs text-stone-500">
+                        <span>1</span>
+                        <span>{conquerMax}</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        onConquer(conquerArmies);
+                        setResult(null);
+                      }}
+                      className="w-full py-2 bg-green-600 hover:bg-green-500 rounded-lg font-bold transition"
+                    >
+                      Ocupar ({conquerArmies} ejércitos)
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-sm text-stone-400">
+                    Esperando que el atacante ocupe el territorio...
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-center gap-8 py-2">
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-xs text-stone-400">Ataque</span>
-            <div className="flex gap-1">
-              {(rolling
-                ? rollingFrames[0]
-                : effectiveResult?.attack || [1, 1, 1].slice(0, attackingArmies)
-              ).map((v: number, i: number) => (
-                <span
-                  key={i}
-                  dangerouslySetInnerHTML={{ __html: getDiceSvg(v, "red") }}
-                  className={rolling ? "animate-pulse" : ""}
-                />
-              ))}
-            </div>
-            {effectiveResult && !rolling && (
-              <span className="text-xs text-red-400">
-                -{effectiveResult.attackLosses}
-              </span>
-            )}
-          </div>
-
-          <Swords size={24} className="text-stone-500" />
-
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-xs text-stone-400">Defensa</span>
-            <div className="flex gap-1">
-              {(rolling
-                ? rollingFrames[1]
-                : effectiveResult?.defense ||
-                  [1, 1, 1].slice(0, Math.min(3, toArmies))
-              ).map((v: number, i: number) => (
-                <span
-                  key={i}
-                  dangerouslySetInnerHTML={{ __html: getDiceSvg(v, "yellow") }}
-                  className={rolling ? "animate-pulse" : ""}
-                />
-              ))}
-            </div>
-            {effectiveResult && !rolling && (
-              <span className="text-xs text-yellow-400">
-                -{effectiveResult.defenseLosses}
-              </span>
-            )}
-          </div>
-        </div>
-
-         {isConquered && (
-           <div className="bg-green-900/30 border border-green-600 rounded-lg p-4 text-center space-y-3">
-             <p className="text-green-400 font-bold text-lg">
-               ¡Territorio conquistado!
-             </p>
-             {!readonly ? (
-               <>
-                 <div className="space-y-2">
-                   <div className="flex items-center justify-between text-sm">
-                     <span className="text-stone-400">Ejércitos a mover</span>
-                     <span className="text-white font-bold text-lg">{conquerArmies}</span>
-                   </div>
-                   <input
-                     type="range"
-                     min={1}
-                     max={conquerMax}
-                     value={conquerArmies}
-                     onChange={e => setConquerArmies(Number(e.target.value))}
-                     className="w-full h-2 bg-stone-700 rounded-lg appearance-none cursor-pointer accent-green-500"
-                   />
-                   <div className="flex justify-between text-xs text-stone-500">
-                     <span>1</span>
-                     <span>{conquerMax}</span>
-                   </div>
-                 </div>
-                 <button
-                   onClick={() => { onConquer(conquerArmies); setResult(null); }}
-                   className="w-full py-2 bg-green-600 hover:bg-green-500 rounded-lg font-bold transition"
-                 >
-                   Ocupar ({conquerArmies} ejércitos)
-                 </button>
-               </>
-             ) : (
-               <p className="text-sm text-stone-400">
-                 Esperando que el atacante ocupe el territorio...
-               </p>
-             )}
-           </div>
-         )}
-
-         {!isConquered && !readonly && (
-           <div className="flex gap-2">
-             <button
-               onClick={onClose}
-               className="flex-1 py-2 bg-stone-700 hover:bg-stone-600 rounded-lg font-medium transition"
-             >
-               Cerrar
-             </button>
-             <button
-               onClick={handleAttack}
-               disabled={loading || fromArmies <= 1}
-               className="flex-1 py-2 bg-red-600 hover:bg-red-500 disabled:opacity-40 rounded-lg font-bold transition"
-             >
-               {result ? 'Atacar de nuevo' : 'Atacar'}
-             </button>
-           </div>
-         )}
-
-         {isConquered && (
-           <button
-             onClick={onClose}
-             className="w-full py-2 bg-stone-700 hover:bg-stone-600 rounded-lg font-medium transition"
-           >
-             Cerrar
-           </button>
           )}
+        </div>
+
+        {!isConquered && !readonly && (
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2 bg-stone-700 hover:bg-stone-600 rounded-lg font-medium transition"
+            >
+              Cerrar
+            </button>
+            <button
+              onClick={handleAttack}
+              disabled={loading || fromArmies <= 1}
+              className="flex-1 py-2 bg-red-600 hover:bg-red-500 disabled:opacity-40 rounded-lg font-bold transition"
+            >
+              {result ? "Atacar de nuevo" : "Atacar"}
+            </button>
+          </div>
+        )}
 
         {readonly && !effectiveResult && (
           <p className="text-center text-stone-400 text-sm">

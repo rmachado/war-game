@@ -116,7 +116,7 @@ export default function CardHand({
                   disabled={!isExchangeValid}
                   className="w-full py-3 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 rounded-xl font-bold text-lg transition"
                 >
-                  Canjear 3 cartas por ejércitos
+                  Canjear cartas
                 </button>
               </div>
             )}
