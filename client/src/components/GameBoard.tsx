@@ -1,22 +1,11 @@
-import { useState, useCallback } from "react";
-import { useParams } from "react-router-dom";
-import { useGame, useGameStore } from "../store/game";
-import { useGameSocket } from "../hooks/useGameSocket";
-import {
-  placeArmies,
-  exchangeCards,
-  attack as apiAttack,
-  conquer as apiConquer,
-  endAttacks,
-  endMoves,
-  moveArmies,
-} from "../api/game";
+import { useState } from "react";
+import { useGameStore, useGameState } from "../store/game";
 import MapView from "./MapView";
 import Sidebar from "./Sidebar";
 import AttackModal from "./AttackModal";
 import CardHand from "./CardHand";
 import MoveModal from "./MoveModal";
-import { COLOR_MAP } from "../types";
+import { COLOR_MAP, type GamePublic, type GameSecret } from "../types";
 import { useTerritoryName, useNeighbors } from "../hooks/useGameData";
 import LeftOverlay from "./LeftOverlay";
 import RightOverlay from "./RightOverlay";
@@ -24,9 +13,16 @@ import ObjectiveCard from "./ObjectiveCard";
 import OrientationGuard from "./OrientationGuard";
 
 export default function GameBoard() {
-  const { code } = useParams<{ code: string }>();
   const { token } = useGameStore();
-  const { data, refetch } = useGame(code!, token);
+  const {
+    public: pub,
+    secret,
+    isConnected,
+    sendAction: _sendAction,
+    spectatorIntent,
+    spectatorResult,
+  } = useGameState();
+  const sendAction = _sendAction ?? ((() => {}) as any);
 
   const [selectedTerritory, setSelectedTerritory] = useState<string | null>(
     null,
@@ -38,12 +34,6 @@ export default function GameBoard() {
     from: string;
     to: string;
   } | null>(null);
-  const [spectatorIntent, setSpectatorIntent] = useState<{
-    from: string;
-    to: string;
-    color: string;
-  } | null>(null);
-  const [spectatorResult, setSpectatorResult] = useState<any>(null);
   const [showCards, setShowCards] = useState(false);
   const [moveFrom, setMoveFrom] = useState<string | null>(null);
   const [moveModal, setMoveModal] = useState<{
@@ -54,62 +44,39 @@ export default function GameBoard() {
 
   const onShowCards = () => setShowCards(true);
 
-  const handleAttackIntent = useCallback(
-    (from: string | null, to: string | null, color?: string) => {
-      if (from && to) {
-        setSpectatorIntent({ from, to, color: color || "" });
-        setSpectatorResult(null);
-      } else {
-        setSpectatorIntent(null);
-        setSpectatorResult(null);
-      }
-    },
-    [],
-  );
-
-  const handleAttackResult = useCallback((result: any) => {
-    setSpectatorResult(result);
-  }, []);
-
-  const { sendAttackIntent } = useGameSocket(
-    code!,
-    token,
-    handleAttackIntent,
-    handleAttackResult,
-  );
-
   const tn = useTerritoryName();
   const neighborsOf = useNeighbors();
 
-  if (!data)
+  if (!isConnected || !pub || !secret)
     return (
       <div className="flex items-center justify-center min-h-screen text-stone-400">
         Cargando...
       </div>
     );
 
-  const { public: pub, secret } = data;
-  const isMyTurn = secret.color === pub.players[pub.turnPlayer]?.color;
-  const isFirstRound = pub.round === 1;
+  const _pub: GamePublic = pub
+  const _secret: GameSecret = secret
+  const isMyTurn = _secret.color === _pub.players[_pub.turnPlayer]?.color;
+  const isFirstRound = _pub.round === 1;
   const [showObjective, setShowObjective] = useState(false);
 
   let turnStatus = "";
-  if (pub.phase === "game_over") {
+  if (_pub.phase === "game_over") {
     turnStatus =
-      pub.winner !== null
-        ? `Juego terminado — ${pub.players[pub.winner]?.name} ganó`
+      _pub.winner !== null
+        ? `Juego terminado — ${_pub.players[_pub.winner]?.name} ganó`
         : "Juego terminado";
   } else if (!isMyTurn) {
-    turnStatus = `Esperando que ${pub.players[pub.turnPlayer]?.name || "?"} juegue...`;
+    turnStatus = `Esperando que ${_pub.players[_pub.turnPlayer]?.name || "?"} juegue...`;
   } else if (
-    pub.phase === "first_round" ||
-    pub.phase === "receive" ||
-    pub.phase === "place"
+    _pub.phase === "first_round" ||
+    _pub.phase === "receive" ||
+    _pub.phase === "place"
   ) {
     turnStatus = "Colocar ejércitos";
-  } else if (pub.phase === "attack") {
+  } else if (_pub.phase === "attack") {
     turnStatus = "Atacar territorios";
-  } else if (pub.phase === "move") {
+  } else if (_pub.phase === "move") {
     turnStatus = "Mover ejércitos";
   }
 
@@ -153,38 +120,28 @@ export default function GameBoard() {
   async function handleExchange(cardIds: string[]) {
     setLoading(true);
     setError("");
-    try {
-      await exchangeCards(code!, token!, cardIds);
-      refetch();
-    } catch (e: any) {
-      setError(e.message);
-    }
+    sendAction("exchange", { cardIds });
     setLoading(false);
   }
 
   async function handlePlaceArmies() {
     const total = Object.values(placementMap).reduce((a, b) => a + b, 0);
-    if (total !== secret.pendingArmies) {
+    if (total !== _secret.pendingArmies) {
       setError(
-        `Debes colocar exactamente ${secret.pendingArmies} ejércitos (colocados: ${total})`,
+        `Debes colocar exactamente ${_secret.pendingArmies} ejércitos (colocados: ${total})`,
       );
       return;
     }
     setLoading(true);
     setError("");
-    try {
-      await placeArmies(code!, token!, placementMap);
-      setPlacementMap({});
-      refetch();
-    } catch (e: any) {
-      setError(e.message);
-    }
+    sendAction("place-armies", { placements: placementMap });
+    setPlacementMap({});
     setLoading(false);
   }
 
   function addArmy(territory: string) {
     const current = Object.values(placementMap).reduce((a, b) => a + b, 0);
-    if (current >= secret.pendingArmies) return;
+    if (current >= _secret.pendingArmies) return;
     setPlacementMap((prev) => ({
       ...prev,
       [territory]: (prev[territory] || 0) + 1,
@@ -206,13 +163,13 @@ export default function GameBoard() {
   function handleTerritoryClick(territoryId: string) {
     if (!isMyTurn) return;
 
-    const terr = pub.territories[territoryId];
-    const isMine = terr?.owner === pub.turnPlayer;
+    const terr = _pub.territories[territoryId];
+    const isMine = terr?.owner === _pub.turnPlayer;
 
     if (
-      pub.phase === "receive" ||
-      pub.phase === "place" ||
-      pub.phase === "first_round"
+      _pub.phase === "receive" ||
+      _pub.phase === "place" ||
+      _pub.phase === "first_round"
     ) {
       if (isMine) {
         setSelectedTerritory((select) =>
@@ -223,7 +180,7 @@ export default function GameBoard() {
       return;
     }
 
-    if (pub.phase === "attack") {
+    if (_pub.phase === "attack") {
       if (isMine && terr.armies >= 2) {
         setSelectedTerritory((select) =>
           select === territoryId ? null : territoryId,
@@ -242,7 +199,7 @@ export default function GameBoard() {
       return;
     }
 
-    if (pub.phase === "move") {
+    if (_pub.phase === "move") {
       if (isMine && terr.armies >= 2 && !moveFrom) {
         setMoveFrom(territoryId);
         setSelectedTerritory(territoryId);
@@ -265,84 +222,61 @@ export default function GameBoard() {
     }
   }
 
-  async function handleAttack(from: string, to: string, armies: number) {
+  function handleAttack(from: string, to: string, armies: number): Promise<any> {
     setLoading(true);
     setError("");
-    try {
-      const result = await apiAttack(code!, token!, from, to, armies);
-      refetch();
-      return result;
-    } catch (e: any) {
-      setError(e.message);
-      return null;
-    } finally {
-      setLoading(false);
-    }
+    sendAction("attack", { from, to, armies });
+    setLoading(false);
+    return Promise.resolve({ phony: true });
   }
 
-  async function handleMove(from: string, to: string, count: number = 1) {
+  function handleMove(from: string, to: string, count: number = 1) {
     setLoading(true);
     setError("");
-    try {
-      await moveArmies(code!, token!, from, to, count);
-      setMoveModal(null);
-      refetch();
-    } catch (e: any) {
-      setError(e.message);
-    }
+    sendAction("move", { from, to, count });
+    setMoveModal(null);
     setLoading(false);
   }
 
-  async function handleConquer(armies: number) {
+  function handleConquer(armies: number): Promise<any> {
     setLoading(true);
     setError("");
-    try {
-      await apiConquer(code!, token!, armies);
-      sendAttackIntent(null, null);
-      setAttackIntent(null);
-      setSelectedTerritory(null);
-      setAttackTarget(null);
-      refetch();
-    } catch (e: any) {
-      setError(e.message);
-    }
+    sendAction("conquer", { armies });
+    sendAction("attack:intent", { from: null, to: null });
+    setAttackIntent(null);
+    setSelectedTerritory(null);
+    setAttackTarget(null);
     setLoading(false);
+    return Promise.resolve({ phony: true });
   }
 
-  async function handleOpenAttack() {
+  function handleOpenAttack() {
     if (selectedTerritory && attackTarget) {
-      sendAttackIntent(selectedTerritory, attackTarget);
+      sendAction("attack:intent", {
+        from: selectedTerritory,
+        to: attackTarget,
+      });
       setAttackIntent({ from: selectedTerritory, to: attackTarget });
     }
   }
 
-  async function handleEndAttacks() {
+  function handleEndAttacks() {
     setLoading(true);
-    try {
-      await endAttacks(code!, token!);
-      setSelectedTerritory(null);
-      setAttackTarget(null);
-      refetch();
-    } catch (e: any) {
-      setError(e.message);
-    }
+    sendAction("end-attacks");
+    setSelectedTerritory(null);
+    setAttackTarget(null);
     setLoading(false);
   }
 
-  async function handleEndMoves() {
+  function handleEndMoves() {
     setLoading(true);
-    try {
-      await endMoves(code!, token!);
-      refetch();
-    } catch (e: any) {
-      setError(e.message);
-    }
+    sendAction("end-moves");
     setLoading(false);
   }
 
-  const winnerName = pub.winner !== null ? pub.players[pub.winner]?.name : null;
+  const winnerName = _pub.winner !== null ? _pub.players[_pub.winner]?.name : null;
   const winnerColor =
-    pub.winner !== null ? pub.players[pub.winner]?.color : null;
+    _pub.winner !== null ? _pub.players[_pub.winner]?.color : null;
 
   return (
     <OrientationGuard>
@@ -350,17 +284,17 @@ export default function GameBoard() {
         <div className="flex flex-col lg:flex-row h-full">
           <div className="flex-1 relative min-h-0">
             <MapView
-              territories={pub.territories}
-              players={pub.players}
-              phase={pub.phase}
-              turnPlayer={pub.turnPlayer}
+              territories={_pub.territories}
+              players={_pub.players}
+              phase={_pub.phase}
+              turnPlayer={_pub.turnPlayer}
               selectedTerritory={selectedTerritory}
               attackTarget={attackTarget}
               moveFrom={moveFrom}
               placementMap={placementMap}
               onTerritoryClick={handleTerritoryClick}
               onShowCards={onShowCards}
-              cardCount={secret.cards.length}
+              cardCount={_secret.cards.length}
               attackIntent={attackIntent}
               attackArrow={
                 spectatorIntent?.from && spectatorIntent?.to
@@ -372,7 +306,7 @@ export default function GameBoard() {
               turnStatus={turnStatus}
               leftOverlay={leftOverlay}
               rightOverlay={rightOverlay}
-              exchangeCounter={pub.exchangeCounter}
+              exchangeCounter={_pub.exchangeCounter}
             />
           </div>
 
@@ -385,11 +319,11 @@ export default function GameBoard() {
 
           {showCards && (
             <CardHand
-              cards={secret.cards}
-              objectiveDescription={secret.objectiveDescription}
-              forcedExchange={secret.forcedExchange}
+              cards={_secret.cards}
+              objectiveDescription={_secret.objectiveDescription}
+              forcedExchange={_secret.forcedExchange}
               isMyTurn={isMyTurn}
-              phase={pub.phase}
+              phase={_pub.phase}
               onExchange={handleExchange}
               onClose={() => setShowCards(false)}
             />
@@ -399,50 +333,50 @@ export default function GameBoard() {
             <AttackModal
               from={attackIntent.from}
               to={attackIntent.to}
-              fromArmies={pub.territories[attackIntent.from]?.armies ?? 0}
-              toArmies={pub.territories[attackIntent.to]?.armies ?? 0}
-              attackerName={secret.name}
+              fromArmies={_pub.territories[attackIntent.from]?.armies ?? 0}
+              toArmies={_pub.territories[attackIntent.to]?.armies ?? 0}
+              attackerName={_secret.name}
               attackerColor={
-                COLOR_MAP[pub.players[pub.turnPlayer]?.color] || "#dc2626"
+                COLOR_MAP[_pub.players[_pub.turnPlayer]?.color] || "#dc2626"
               }
               defenderName={
-                pub.players[pub.territories[attackIntent.to]?.owner]?.name ||
+                _pub.players[_pub.territories[attackIntent.to]?.owner]?.name ||
                 "?"
               }
               defenderColor={
                 COLOR_MAP[
-                  pub.players[pub.territories[attackIntent.to]?.owner]?.color
+                  _pub.players[_pub.territories[attackIntent.to]?.owner]?.color
                 ] || "#eab308"
               }
               readonly={false}
               onAttack={handleAttack}
               onConquer={handleConquer}
               onClose={() => {
-                sendAttackIntent(null, null);
+                sendAction("attack:intent", { from: null, to: null });
                 setAttackIntent(null);
               }}
             />
           )}
 
-          {!attackIntent && pub.pendingConquest && isMyTurn && (
+          {!attackIntent && _pub.pendingConquest && isMyTurn && (
             <AttackModal
-              from={pub.pendingConquest.from}
-              to={pub.pendingConquest.to}
+              from={_pub.pendingConquest.from}
+              to={_pub.pendingConquest.to}
               fromArmies={
-                pub.territories[pub.pendingConquest.from]?.armies ?? 0
+                _pub.territories[_pub.pendingConquest.from]?.armies ?? 0
               }
-              toArmies={pub.territories[pub.pendingConquest.to]?.armies ?? 0}
-              attackerName={secret.name}
+              toArmies={_pub.territories[_pub.pendingConquest.to]?.armies ?? 0}
+              attackerName={_secret.name}
               attackerColor={
-                COLOR_MAP[pub.players[pub.turnPlayer]?.color] || "#dc2626"
+                COLOR_MAP[_pub.players[_pub.turnPlayer]?.color] || "#dc2626"
               }
               defenderName={
-                pub.players[pub.territories[pub.pendingConquest.to]?.owner]
+                _pub.players[_pub.territories[_pub.pendingConquest.to]?.owner]
                   ?.name || "?"
               }
               defenderColor={
                 COLOR_MAP[
-                  pub.players[pub.territories[pub.pendingConquest.to]?.owner]
+                  _pub.players[_pub.territories[_pub.pendingConquest.to]?.owner]
                     ?.color
                 ] || "#eab308"
               }
@@ -458,10 +392,10 @@ export default function GameBoard() {
               <AttackModal
                 from={spectatorIntent.from}
                 to={spectatorIntent.to}
-                fromArmies={pub.territories[spectatorIntent.from]?.armies ?? 0}
-                toArmies={pub.territories[spectatorIntent.to]?.armies ?? 0}
+                fromArmies={_pub.territories[spectatorIntent.from]?.armies ?? 0}
+                toArmies={_pub.territories[spectatorIntent.to]?.armies ?? 0}
                 attackerName={
-                  pub.players.find((p) => p.color === spectatorIntent.color)
+                  _pub.players.find((p) => p.color === spectatorIntent.color)
                     ?.name || "?"
                 }
                 attackerColor={
@@ -469,12 +403,12 @@ export default function GameBoard() {
                   "#dc2626"
                 }
                 defenderName={
-                  pub.players[pub.territories[spectatorIntent.to]?.owner]
+                  _pub.players[_pub.territories[spectatorIntent.to]?.owner]
                     ?.name || "?"
                 }
                 defenderColor={
                   COLOR_MAP[
-                    pub.players[pub.territories[spectatorIntent.to]?.owner]
+                    _pub.players[_pub.territories[spectatorIntent.to]?.owner]
                       ?.color
                   ] || "#eab308"
                 }
@@ -488,7 +422,7 @@ export default function GameBoard() {
             <MoveModal
               from={moveModal.from}
               to={moveModal.to}
-              maxArmies={(pub.territories[moveModal.from]?.armies ?? 1) - 1}
+              maxArmies={(_pub.territories[moveModal.from]?.armies ?? 1) - 1}
               onMove={(count) =>
                 handleMove(moveModal.from, moveModal.to, count)
               }
@@ -497,7 +431,7 @@ export default function GameBoard() {
           )}
         </div>
 
-        {pub.phase === "game_over" && winnerName ? (
+        {_pub.phase === "game_over" && winnerName ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
             <div className="bg-stone-900/60 rounded-2xl border border-amber-500/30 p-10 flex flex-col items-center gap-6 shadow-2xl max-w-md">
               <h1 className="text-4xl font-bold text-center">
@@ -514,7 +448,7 @@ export default function GameBoard() {
                 ha ganado!
               </h1>
               <ObjectiveCard
-                description={pub.winnerObjective || ""}
+                description={_pub.winnerObjective || ""}
                 className="w-48"
               />
               <button

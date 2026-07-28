@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { useGame, useGameStore } from '../store/game'
-import { startGame, kickPlayer } from '../api/game'
+import { useGameStore, useGameState } from '../store/game'
+import { useGameSocket } from '../hooks/useGameSocket'
 import { COLOR_MAP, COLOR_NAMES, ALL_COLORS, type Color } from '../types'
 import GameBoard from './GameBoard'
 import { Copy, Play, X, ArrowLeft } from 'lucide-react'
@@ -10,10 +10,18 @@ import { Link } from 'react-router-dom'
 export default function Lobby() {
   const { code } = useParams<{ code: string }>()
   const { token, code: storedCode } = useGameStore()
-  const { data, isLoading, error, refetch } = useGame(code!, token)
+  const { lobbyPlayers, isConnected, error, public: pub } = useGameState()
+  const [localError, setLocalError] = useState('')
 
-  if (isLoading) return <div className="flex items-center justify-center min-h-screen text-stone-400">Cargando...</div>
-  if (error || !data) {
+  const { sendAction } = useGameSocket(code!, token)
+
+  if (!isConnected) return <div className="flex items-center justify-center min-h-screen text-stone-400">Cargando...</div>
+
+  if (pub && pub.phase !== 'lobby') {
+    return <GameBoard />
+  }
+
+  if (error || !lobbyPlayers) {
     return (
       <div className="flex items-center justify-center min-h-screen p-4">
         <div className="text-center">
@@ -33,58 +41,31 @@ export default function Lobby() {
     )
   }
 
-  if (data.public.phase !== 'lobby') {
-    return <GameBoard />
-  }
+  if (lobbyPlayers.length === 0) return null
 
-  const isCreator = data.public.players[0]?.color === token?.split(':')[1]
+  const isCreator = lobbyPlayers[0]?.color === token?.split(':')[1]
   const myColor = token?.split(':')[1] || ''
   const activeCode = code || storedCode || ''
   const totalSlots = 6
-  const filledSlots = data.public.players.length
+  const filledSlots = lobbyPlayers.length
   const emptySlots = Math.max(0, totalSlots - filledSlots)
 
-  async function handleStart() {
-    try {
-      await startGame(activeCode, token!)
-      refetch()
-    } catch (e: any) {
-      alert(e.message)
-    }
+  function handleStart() {
+    sendAction('start')
   }
 
-  async function handleChangeColor(newColor: Color) {
-    try {
-      const res = await fetch(`/api/games/${activeCode}/change-color`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, color: newColor }),
-      })
-      if (!res.ok) {
-        const d = await res.json()
-        alert(d.error)
-        return
-      }
-      const d = await res.json()
-      const newToken = `${activeCode}:${newColor}`
-      useGameStore.getState().setSession(activeCode, newToken)
-      refetch()
-    } catch (e: any) {
-      alert(e.message)
-    }
+  function handleChangeColor(newColor: Color) {
+    sendAction('change-color', { color: newColor })
+    const newToken = `${activeCode}:${newColor}`
+    useGameStore.getState().setSession(activeCode, newToken, useGameStore.getState().playerName || '')
   }
 
-  async function handleKick(targetColor: string) {
-    try {
-      await kickPlayer(activeCode, token!, targetColor)
-      refetch()
-    } catch (e: any) {
-      alert(e.message)
-    }
+  function handleKick(targetColor: string) {
+    sendAction('kick', { targetColor })
   }
 
-  const takenColors = new Set(data.public.players.map(p => p.color))
-  const allColorsUnique = data.public.players.length === new Set(data.public.players.map(p => p.color)).size
+  const takenColors = new Set(lobbyPlayers.map(p => p.color))
+  const allColorsUnique = lobbyPlayers.length === new Set(lobbyPlayers.map(p => p.color)).size
 
   function handleCopyLink() {
     const link = `${window.location.origin}/?join=${activeCode}`
@@ -112,11 +93,11 @@ export default function Lobby() {
         </div>
 
         <div className="space-y-2 mb-6">
-          {data.public.players.map((p, i) => {
+          {lobbyPlayers.map((p, i) => {
             const isMe = p.color === myColor
             return (
               <div key={i} className="flex items-center gap-3 bg-stone-800 rounded-lg p-3">
-                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: COLOR_MAP[p.color] }} />
+                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: COLOR_MAP[p.color as keyof typeof COLOR_MAP] }} />
                 <span className="flex-1">{p.name}{isMe ? ' (tú)' : ''}</span>
 
                 {isMe ? (
@@ -133,7 +114,7 @@ export default function Lobby() {
                     ))}
                   </div>
                 ) : (
-                  <span className="text-xs text-stone-400">{COLOR_NAMES[p.color]}</span>
+                  <span className="text-xs text-stone-400">{COLOR_NAMES[p.color as keyof typeof COLOR_NAMES]}</span>
                 )}
                 {i === 0 && <span className="text-xs bg-amber-600 px-2 py-0.5 rounded">Anfitrión</span>}
                 {isCreator && i !== 0 && (
@@ -156,6 +137,7 @@ export default function Lobby() {
           ))}
         </div>
 
+        {localError && <p className="text-red-400 text-sm text-center mb-3">{localError}</p>}
         {!allColorsUnique && (
           <p className="text-red-400 text-sm text-center mb-3">Cada jugador debe tener un color único</p>
         )}

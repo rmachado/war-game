@@ -1,66 +1,82 @@
 import { useEffect, useRef, useCallback } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useGameStore, useGameState } from '../store/game'
 
-interface WSEvent {
-  type: 'game:state' | 'attack:intent' | 'attack:result' | 'auth:ok'
-  public?: any
-  secret?: any
-  from?: string | null
-  to?: string | null
-  color?: string
-  attack?: number[]
-  defense?: number[]
-  attackLosses?: number
-  defenseLosses?: number
-  conquered?: boolean
-}
+const sockets = new Map<string, WebSocket>()
+const initialized = new Set<string>()
 
 export function useGameSocket(
   code: string | null,
   token: string | null,
-  onAttackIntent: (from: string | null, to: string | null, color?: string) => void,
-  onAttackResult: (result: any) => void,
 ) {
-  const queryClient = useQueryClient()
   const wsRef = useRef<WebSocket | null>(null)
-  const reconnectRef = useRef<ReturnType<typeof setTimeout>>()
+  const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const playerName = useGameStore((s) => s.playerName)
 
   const connect = useCallback(() => {
     if (!code || !token) return
 
+    const key = `${code}:${token}`
+    const existing = sockets.get(key)
+    if (existing && existing.readyState === WebSocket.OPEN) {
+      wsRef.current = existing
+      return
+    }
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`)
+    const ws = new WebSocket(
+      `${protocol}//${window.location.host}/ws?code=${encodeURIComponent(code)}&token=${encodeURIComponent(token)}`,
+    )
 
     ws.onopen = () => {
-      ws.send(JSON.stringify({
-        type: 'auth',
-        code,
-        color: token.split(':')[1],
-      }))
+      ws.send(
+        JSON.stringify({
+          type: 'auth',
+          code,
+          color: token.split(':')[1],
+          name: playerName,
+        }),
+      )
     }
 
     ws.onmessage = (event) => {
       try {
-        const msg: WSEvent = JSON.parse(event.data)
+        const msg = JSON.parse(event.data)
 
         if (msg.type === 'game:state' && msg.public && msg.secret) {
-          queryClient.setQueryData(['game', code], {
-            public: msg.public,
-            secret: msg.secret,
-          })
+          useGameState.getState().setGameState(msg.public, msg.secret)
+        }
+
+        if (msg.type === 'lobby:state' && msg.players) {
+          useGameState.getState().setLobbyState(msg.players)
         }
 
         if (msg.type === 'attack:intent') {
-          onAttackIntent(msg.from ?? null, msg.to ?? null, msg.color)
+          if (msg.from && msg.to) {
+            useGameState.getState().setSpectatorIntent({
+              from: msg.from,
+              to: msg.to,
+              color: msg.color ?? '',
+            })
+            useGameState.getState().setSpectatorResult(null)
+          } else {
+            useGameState.getState().setSpectatorIntent(null)
+            useGameState.getState().setSpectatorResult(null)
+          }
         }
 
         if (msg.type === 'attack:result') {
-          onAttackResult(msg)
+          useGameState.getState().setSpectatorResult(msg)
+        }
+
+        if (msg.type === 'error') {
+          useGameState.getState().setError(msg.message)
         }
       } catch {}
     }
 
     ws.onclose = () => {
+      useGameState.getState().setConnected(false)
+      sockets.delete(key)
       reconnectRef.current = setTimeout(connect, 3000)
     }
 
@@ -68,24 +84,41 @@ export function useGameSocket(
       ws.close()
     }
 
+    sockets.set(key, ws)
     wsRef.current = ws
-  }, [code, token, queryClient, onAttackIntent, onAttackResult])
+  }, [code, token, playerName])
+
+  const sendAction = useCallback((type: string, payload?: any) => {
+    const ws = wsRef.current
+    if (ws?.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type, ...payload }))
+    }
+  }, [])
 
   useEffect(() => {
-    connect()
-    return () => {
-      clearTimeout(reconnectRef.current)
-      wsRef.current?.close()
+    const key = code && token ? `${code}:${token}` : null
+
+    if (key && !initialized.has(key)) {
+      initialized.add(key)
+      useGameState.getState().reset()
     }
-  }, [connect])
 
-  function sendAttackIntent(from: string | null, to: string | null) {
-    wsRef.current?.send(JSON.stringify({
-      type: 'attack:intent',
-      from,
-      to,
-    }))
-  }
+    if (key) {
+      connect()
+      useGameState.getState().setSendAction(sendAction)
+    }
 
-  return { sendAttackIntent }
+    return () => {
+      if (reconnectRef.current) clearTimeout(reconnectRef.current)
+      const ws = wsRef.current
+      if (ws) {
+        ws.onclose = null
+        ws.close()
+        sockets.delete(key!)
+      }
+      if (key) initialized.delete(key)
+    }
+  }, [connect, sendAction])
+
+  return { sendAction }
 }

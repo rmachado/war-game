@@ -10,10 +10,10 @@ interface RightOverlayProps {
   isFirstRound: boolean;
   selectedTerritory: string | null;
   attackTarget: string | null;
-  handlePlaceArmies: () => Promise<void>;
-  handleOpenAttack: () => Promise<void>;
-  handleEndAttacks: () => Promise<void>;
-  handleEndMoves: () => Promise<void>;
+  handlePlaceArmies: () => void;
+  handleOpenAttack: () => void;
+  handleEndAttacks: () => void;
+  handleEndMoves: () => void;
 }
 
 export default function RightOverlay({

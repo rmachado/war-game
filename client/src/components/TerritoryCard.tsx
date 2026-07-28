@@ -1,4 +1,4 @@
-import type { Card } from "../types";
+import type { Card, CardSymbol } from "../types";
 import { useTerritoryName } from "../hooks/useGameData";
 import { Check } from "lucide-react";
 

@@ -8,7 +8,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 3000,
-      refetchInterval: 5000,
+      refetchInterval: false,
     },
   },
 })
@@ -18,5 +18,5 @@ createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <App />
     </BrowserRouter>
-  </QueryClientProvider>
+  </QueryClientProvider>,
 )

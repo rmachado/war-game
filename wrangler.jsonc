@@ -1,0 +1,35 @@
+{
+	"name": "war",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-07-01",
+	"assets": {
+		"directory": "client/dist",
+		"not_found_handling": "single-page-application"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "war-db",
+			"database_id": "3e32d261-35eb-4d06-bc01-3fb1a4817dc1"
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "ROOM",
+				"class_name": "GameRoom"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": [
+				"GameRoom"
+			]
+		}
+	],
+	"observability": {
+		"enabled": true
+	}
+}

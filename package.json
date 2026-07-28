@@ -2,14 +2,23 @@
   "name": "war",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "dev:server": "cd server && npm run dev",
+    "dev": "concurrently \"cd client && npm run dev\" \"wrangler dev\"",
+    "dev:server": "wrangler dev",
     "dev:client": "cd client && npm run dev",
     "build": "cd client && npm run build",
-    "start": "cd server && npm start"
+    "deploy": "cd client && npm run build && wrangler deploy",
+    "db:migrate": "wrangler d1 execute war-db --remote --file=./schema.sql",
+    "db:migrate:local": "wrangler d1 execute war-db --local --file=./schema.sql",
+    "test": "cd server && npm test"
   },
   "devDependencies": {
-    "concurrently": "^9.1.0"
+    "@cloudflare/workers-types": "^5.20260727.1",
+    "concurrently": "^9.1.0",
+    "wrangler": "^4.0.0"
+  },
+  "dependencies": {
+    "hono": "^4.0.0"
   }
 }

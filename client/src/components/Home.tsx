@@ -35,7 +35,7 @@ export default function Home() {
     try {
       const data = await createGame(name.trim(), color);
       localStorage.setItem("war_name", name.trim());
-      setSession(data.code, data.token);
+      setSession(data.code, data.token, name.trim());
       navigate(`/game/${data.code}`);
     } catch (e: any) {
       setError(e.message);
@@ -54,14 +54,14 @@ export default function Home() {
       const cleanedCode = joinCode.trim().toUpperCase();
       try {
         const data = await joinGame(cleanedCode, name.trim() || "Jugador", color);
-        localStorage.setItem("war2_name", name.trim());
-        setSession(data.code, data.token);
+        localStorage.setItem("war_name", name.trim());
+        setSession(data.code, data.token, name.trim() || "Jugador");
         navigate(`/game/${data.code}`);
       } catch (e: any) {
         if (e.message?.includes("ya comenzó") || e.message?.includes("comenzó")) {
-          const data = await rejoinGame(cleanedCode, color);
-          localStorage.setItem("war2_name", data.name);
-          setSession(data.code, data.token);
+          const data = await rejoinGame(cleanedCode, color, name.trim() || "Jugador");
+          localStorage.setItem("war_name", data.name);
+          setSession(data.code, data.token, data.name);
           navigate(`/game/${data.code}`);
         } else {
           throw e;
